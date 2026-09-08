@@ -247,6 +247,28 @@ textarea{width:100%;min-height:90px;font:12px/1.4 ui-monospace,monospace;border:
 .toast.show{opacity:1}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 @media (max-width:400px){.prompt{font-size:21px}.opt{font-size:18px}.subjects{gap:6px}.subj .name{font-size:18px}}
+/* ---------- 图与分步 ---------- */
+.fig{display:block;max-width:100%;height:auto}
+.qfig{display:flex;justify-content:center;padding:4px 0}
+.figrow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:6px 0}
+.arrow{font-size:13px;color:var(--ink3)}
+.cap{display:block;font-size:12px;color:var(--ink2);text-align:center;margin-top:2px}
+.cap2{font-size:14px;color:var(--ink2);line-height:1.7}
+.vlist{display:flex;gap:14px;font-size:12px;color:var(--ink2)} .vlist div{display:flex;flex-direction:column;align-items:center;gap:4px}
+.ft{border-collapse:collapse} .ft th{font-size:12px;color:var(--ink3);font-weight:600;padding:2px 8px} .ft td{padding:4px 8px;text-align:center;border-bottom:1px solid var(--line)}
+.lfig{background:var(--sunk);border:1px solid var(--line);padding:12px;overflow-x:auto}
+.work{font-family:var(--en);font-size:22px;font-weight:700;line-height:1.7;font-variant-numeric:tabular-nums;padding:4px 0 4px 12px;border-left:3px solid var(--line);white-space:nowrap}
+.work .first{padding-left:1.15em}
+.work mark{background:var(--b4-bg);color:inherit;border-radius:3px;padding:0 3px;outline:2px solid var(--b4)}
+.board{background:var(--sunk);padding:6px 14px;border-radius:6px;overflow-x:auto}
+.stepdots{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3)} .stepdots i{width:10px;height:10px;border-radius:50%;background:var(--line);display:inline-block} .stepdots i.done{background:var(--ok)} .stepdots i.now{background:var(--ink)} .stepdots span{margin-left:6px}
+.stepq{font-size:19px;font-weight:600;margin-bottom:10px;line-height:1.5}
+.stephint{margin-top:10px;font-size:15px;line-height:1.6;padding:10px 12px;border-radius:6px} .stephint.ok{background:var(--ok-bg)} .stephint.bad{background:var(--bad-bg)}
+.stephint .acts{margin-top:8px}
+.opts.has-html{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
+.opt{position:relative}
+.opt.html{flex-direction:column;justify-content:center;padding:14px 8px 10px;gap:4px} .opt.html .k{position:absolute;left:8px;top:6px;width:auto}
+.opt.html>span:last-child{display:flex;flex-direction:column;align-items:center}
 </style>
 </head>
 <body>
@@ -490,56 +512,198 @@ kp({id:'yw2-rj',s:'yw',u:2,name:'习作《写日记》',
   {t:'mc',q:'下面哪些内容可以写进日记？',o:['看到的、想到的、听到的、做过的都可以','只能写开心的事','只能写学习的事','只能写发生在学校的事'],a:0,exp:'见闻和感受都行，日记是自己的。'},
  ]});
 
-/* ---------------- 数学 · 第一单元 观察物体 ---------------- */
+/* ================= 题库 · 数学（带图 + 分步） =================
+   items 里可以放函数：每次出题时调用，返回一道已经"归一化"的题：
+   {kind:'choice', html?, prompt, opts, ans, exp, optHtml?}  或
+   {kind:'steps',  html?, prompt, steps:[{q, kind:'choice'|'num', opts?, ans, after, hint}], exp}
+   ============================================================== */
+const R_ = (lo,hi)=>lo+Math.floor(Math.random()*(hi-lo+1));
+const SV = (w,h,inner,cls)=>`<svg class="fig ${cls||''}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-hidden="true">${inner}</svg>`;
+
+/* ---- 等轴测小方块 ---- */
+function isoP(x,y,z,s){ return [(x-y)*0.866*s, (x+y)*0.5*s - z*s]; }
+function cubeFaces(x,y,z,s){
+  const P=(a,b,c)=>isoP(a,b,c,s).join(',');
+  return [
+    ['t',`${P(x,y,z+1)} ${P(x+1,y,z+1)} ${P(x+1,y+1,z+1)} ${P(x,y+1,z+1)}`],
+    ['l',`${P(x,y+1,z)} ${P(x+1,y+1,z)} ${P(x+1,y+1,z+1)} ${P(x,y+1,z+1)}`],
+    ['r',`${P(x+1,y,z)} ${P(x+1,y+1,z)} ${P(x+1,y+1,z+1)} ${P(x+1,y,z+1)}`],
+  ];
+}
+const FACE = {t:'fill:var(--sx);opacity:.35',l:'fill:var(--sx);opacity:.62',r:'fill:var(--sx);opacity:.9'};
+function svgBoxes(list, s, w, h){ // list: [{x,y,z,dx?,dy?,dz?}] 单位方块或长方体
+  let polys=[]; let pts=[];
+  list.slice().sort((a,b)=>(a.x+a.y+a.z)-(b.x+b.y+b.z)).forEach(b=>{
+    const dx=b.dx||1,dy=b.dy||1,dz=b.dz||1;
+    const P=(a,c,d)=>{const p=isoP(a,c,d,s);pts.push(p);return p.join(',');};
+    const {x,y,z}=b;
+    polys.push(['t',`${P(x,y,z+dz)} ${P(x+dx,y,z+dz)} ${P(x+dx,y+dy,z+dz)} ${P(x,y+dy,z+dz)}`]);
+    polys.push(['l',`${P(x,y+dy,z)} ${P(x+dx,y+dy,z)} ${P(x+dx,y+dy,z+dz)} ${P(x,y+dy,z+dz)}`]);
+    polys.push(['r',`${P(x+dx,y,z)} ${P(x+dx,y+dy,z)} ${P(x+dx,y+dy,z+dz)} ${P(x+dx,y,z+dz)}`]);
+  });
+  const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+  const minx=Math.min(...xs), maxx=Math.max(...xs), miny=Math.min(...ys), maxy=Math.max(...ys);
+  const W=w||Math.ceil(maxx-minx+12), H=h||Math.ceil(maxy-miny+12);
+  const ox=(W-(maxx-minx))/2-minx, oy=(H-(maxy-miny))/2-miny;
+  return SV(W,H,`<g transform="translate(${ox.toFixed(1)},${oy.toFixed(1)})">${polys.map(([f,p])=>`<polygon points="${p}" style="${FACE[f]}" stroke="var(--card)" stroke-width="1.2" stroke-linejoin="round"/>`).join('')}</g>`);
+}
+function svgCubes(Hm, s){ // Hm[y][x] = 高度，y=0 是后排
+  const list=[]; Hm.forEach((row,y)=>row.forEach((hh,x)=>{ for(let z=0;z<hh;z++) list.push({x,y,z}); }));
+  return svgBoxes(list, s||22);
+}
+/* 三视图（小格子图） */
+function viewGrid(cells){ // cells[r][c] 布尔，r=0 在上
+  const s=18, rows=cells.length, cols=cells[0].length;
+  let g='';
+  cells.forEach((row,r)=>row.forEach((v,c)=>{ if(v) g+=`<rect x="${c*s+1}" y="${r*s+1}" width="${s-2}" height="${s-2}" rx="2" style="fill:var(--sx);opacity:.8"/>`; }));
+  return SV(cols*s, rows*s, g, 'vg');
+}
+function views(Hm){
+  const rows=Hm.length, cols=Hm[0].length;
+  const colH=[...Array(cols)].map((_,x)=>Math.max(...Hm.map(r=>r[x])));
+  const rowH=Hm.map(r=>Math.max(...r));
+  const mk=(hs)=>{ const m=Math.max(...hs); return [...Array(m)].map((_,r)=>hs.map(h=>r>=m-h)); };
+  const front=mk(colH);
+  const left=mk(rowH.slice().reverse());   // 站在左边看：前排在你的左手边
+  const right=mk(rowH);
+  const top=Hm.map(r=>r.map(h=>h>0));
+  return {front,left,right,top};
+}
+function gridKey(c){ return c.map(r=>r.map(v=>v?1:0).join('')).join('/'); }
+function randLayout(forCount){
+  while(true){
+    const cols=R_(2,3), rows=2;
+    const Hm=[...Array(rows)].map(()=>[...Array(cols)].map(()=>R_(0,3)));
+    if(forCount){ for(let x=0;x<cols;x++){ if(Hm[0][x]<Hm[1][x]) Hm[0][x]=Hm[1][x]; } }
+    const total=Hm.flat().reduce((a,b)=>a+b,0);
+    if(total<3||total>9) continue;
+    if(Hm[1].every(h=>h===0)) continue;
+    if(Hm[0].every(h=>h===0)) continue;
+    return Hm;
+  }
+}
+/* ---- 几何体 ---- */
+function svgSolid(kind){
+  if(kind==='cube') return svgBoxes([{x:0,y:0,z:0}],44,110,110);
+  if(kind==='cuboid') return svgBoxes([{x:0,y:0,z:0,dx:2.2,dy:1,dz:1}],36,140,110);
+  if(kind==='cylinder') return SV(110,110,`<path d="M25 30 v55 a30 12 0 0 0 60 0 v-55" style="fill:var(--sx);opacity:.7"/><ellipse cx="55" cy="30" rx="30" ry="12" style="fill:var(--sx);opacity:.35" stroke="var(--card)" stroke-width="1.2"/>`);
+  if(kind==='sphere') return SV(110,110,`<circle cx="55" cy="55" r="40" style="fill:var(--sx);opacity:.7"/><circle cx="42" cy="42" r="12" style="fill:var(--card);opacity:.35"/>`);
+}
+function svgShape(kind){
+  const sz=64;
+  if(kind==='square') return SV(sz,sz,`<rect x="10" y="10" width="44" height="44" rx="2" style="fill:var(--sx);opacity:.75"/>`,'sh');
+  if(kind==='rect') return SV(sz,sz,`<rect x="6" y="18" width="52" height="28" rx="2" style="fill:var(--sx);opacity:.75"/>`,'sh');
+  if(kind==='circle') return SV(sz,sz,`<circle cx="32" cy="32" r="23" style="fill:var(--sx);opacity:.75"/>`,'sh');
+  if(kind==='tri') return SV(sz,sz,`<polygon points="32,9 56,54 8,54" style="fill:var(--sx);opacity:.75"/>`,'sh');
+}
+const SOLIDS = {cube:'正方体',cuboid:'长方体',cylinder:'圆柱',sphere:'球'};
+const SHAPES = {square:'正方形',rect:'长方形',circle:'圆形',tri:'三角形'};
+/* ---- 骰子 ---- */
+const PIPS={1:[[.5,.5]],2:[[.27,.27],[.73,.73]],3:[[.27,.27],[.5,.5],[.73,.73]],4:[[.27,.27],[.73,.27],[.27,.73],[.73,.73]],5:[[.27,.27],[.73,.27],[.5,.5],[.27,.73],[.73,.73]],6:[[.27,.22],[.73,.22],[.27,.5],[.73,.5],[.27,.78],[.73,.78]]};
+function svgDice(top,front,right){
+  const s=46, cx=62, cy=108; const T=[cx,cy-s], L=[cx-0.866*s, cy-0.5*s];
+  const face=(pts,st)=>`<polygon points="${pts}" style="${st}" stroke="var(--card)" stroke-width="1.5" stroke-linejoin="round"/>`;
+  const pip=(m,n)=>PIPS[n].map(([u,v])=>`<circle cx="${u}" cy="${v}" r=".085" transform="matrix(${m.join(' ')})" fill="var(--card)"/>`).join('');
+  const P=(x,y)=>`${x.toFixed(1)},${y.toFixed(1)}`;
+  const topPts=`${P(T[0],T[1])} ${P(T[0]-0.866*s,T[1]-0.5*s)} ${P(T[0],T[1]-s)} ${P(T[0]+0.866*s,T[1]-0.5*s)}`;
+  const leftPts=`${P(cx,cy)} ${P(cx,cy-s)} ${P(cx-0.866*s,cy-1.5*s)} ${P(cx-0.866*s,cy-0.5*s)}`;
+  const rightPts=`${P(cx,cy)} ${P(cx,cy-s)} ${P(cx+0.866*s,cy-1.5*s)} ${P(cx+0.866*s,cy-0.5*s)}`;
+  const mTop=[0.866*s,0.5*s,0.866*s,-0.5*s, cx-0.866*s, cy-1.5*s];
+  const mLeft=[0.866*s,0.5*s,0,s, cx-0.866*s, cy-1.5*s];
+  const mRight=[0.866*s,-0.5*s,0,s, cx, cy-s];
+  return SV(124,124, face(topPts,'fill:#E9C24B')+face(leftPts,'fill:#D6A82F')+face(rightPts,'fill:#B98C1E')+pip(mTop,top)+pip(mLeft,front)+pip(mRight,right));
+}
+/* ---- 展开图（带字母） ---- */
+const NETS = [
+  {cells:[[1,0],[0,1],[1,1],[2,1],[3,1],[1,2]], opp:[[0,5],[1,3],[2,4]]},           // 1-4-1
+  {cells:[[0,0],[1,0],[1,1],[2,1],[3,1],[3,2]], opp:[[0,3],[1,5],[2,4]]},           // 2-3-1
+  {cells:[[0,0],[1,0],[1,1],[2,1],[2,2],[3,2]], opp:[[0,3],[1,4],[2,5]]},           // 2-2-2 楼梯
+  {cells:[[2,0],[0,1],[1,1],[2,1],[3,1],[2,2]], opp:[[0,5],[1,3],[2,4]]},           // 1-4-1 变体
+];
+function svgNet(net, letters){
+  const s=30; const maxx=Math.max(...net.cells.map(c=>c[0]))+1, maxy=Math.max(...net.cells.map(c=>c[1]))+1;
+  return SV(maxx*s+4, maxy*s+4, net.cells.map(([x,y],i)=>`<rect x="${x*s+2}" y="${y*s+2}" width="${s}" height="${s}" style="fill:var(--sx);opacity:.18" stroke="var(--sx)" stroke-width="1.5"/><text x="${x*s+2+s/2}" y="${y*s+2+s/2+6}" text-anchor="middle" font-size="17" font-weight="700" fill="var(--ink)">${letters[i]}</text>`).join(''));
+}
+function svgNetPlain(cells, cols){ // 只画格子，判断能否折
+  const s=26; const maxx=Math.max(...cells.map(c=>c[0]))+1, maxy=Math.max(...cells.map(c=>c[1]))+1;
+  return SV(maxx*s+4,maxy*s+4,cells.map(([x,y])=>`<rect x="${x*s+2}" y="${y*s+2}" width="${s}" height="${s}" style="fill:var(--sx);opacity:.8" stroke="var(--card)" stroke-width="1.5"/>`).join(''));
+}
+/* ---- 线段图 ---- */
+function svgBar(total, partA, partB, below){
+  const W=300; const x0=16, x1=284, y=54; const split=x0+(x1-x0)*0.6;
+  const brace=(a,b,yy,label,up)=>`<path d="M${a} ${yy} v${up?-6:6} M${b} ${yy} v${up?-6:6} M${a} ${yy+(up?-6:6)} H${b}" fill="none" stroke="var(--ink2)" stroke-width="1.3"/><text x="${(a+b)/2}" y="${up?yy-11:yy+20}" text-anchor="middle" font-size="12.5" fill="var(--ink)">${label}</text>`;
+  return SV(W,128,
+    `<rect x="${x0}" y="${y}" width="${split-x0}" height="20" style="fill:var(--sx);opacity:.75"/>
+     <rect x="${split}" y="${y}" width="${x1-split}" height="20" style="fill:var(--sx);opacity:.3" stroke="var(--sx)" stroke-dasharray="4 3"/>
+     ${brace(x0,x1,y-4,total,true)}
+     ${brace(x0,split,y+24,partA,false)}
+     ${brace(split,x1,y+24,partB,false)}
+     ${below?`<text x="${(split+x1)/2}" y="${y+68}" text-anchor="middle" font-size="12.5" fill="var(--ink3)">${below}</text>`:''}`,'bar');
+}
+/* ---- 脱式板 ---- */
+const work = lines => `<div class="work">${lines.map((l,i)=>`<div class="${i?'eq':'first'}">${l}</div>`).join('')}</div>`;
+
+/* ================== 第一单元 · 观察物体 ================== */
 kp({id:'sx1-jc',s:'sx',u:1,name:'观察的方位和规律',
  lesson:'看一个东西，可以从前面、后面、左面、右面、上面五个方向看。同一个东西，换个位置看，样子经常不一样：一个杯子从上面看是圆的，从前面看却是长方形。做题时先问自己：我站在哪儿？',
+ lessonHtml:`<div class="figrow">${svgSolid('cylinder')}<span class="arrow">从上面看 →</span>${svgShape('circle')}<span class="arrow">从前面看 →</span>${svgShape('rect')}</div>`,
  items:[
   {t:'mc',q:'我们通常从几个方向观察物体？',o:['前、后、左、右、上','只有前面','前和后','上和下'],a:0,exp:'五个方向：前面、后面、左面、右面、上面。'},
   {t:'tf',q:'从不同位置看同一个物体，看到的形状一定一样。',a:false,exp:'换个位置，看到的样子常常不一样。杯子从上面看是圆，从前面看是长方形。'},
   {t:'mc',q:'观察物体时，眼睛应该怎么看？',o:['正对物体，视线垂直物体表面','斜着看','闭一只眼','从很远的地方看'],a:0,exp:'正对着、视线垂直，看到的形状才准。'},
- ]});
-kp({id:'sx1-3m',s:'sx',u:1,name:'最多看到 3 个面',
- lesson:'拿一个盒子放桌上，站在一个地方不动，你最多能看见几个面？试试就知道：最多 3 个（比如前面、上面、右面）。后面和下面被挡住了，左面也看不到。想看更多，只能换位置。',
- items:[
-  {t:'mc',q:'站在一个固定位置看一个长方体盒子，最多能看到几个面？',o:['3 个','6 个','4 个','2 个'],a:0,exp:'最多 3 个。后面、下面和另一个侧面都被挡住了。'},
-  {t:'tf',q:'站在一个地方不动，能同时看到正方体的 4 个面。',a:false,exp:'最多只能看到 3 个面。'},
-  {t:'mc',q:'一个正方体有几个面？',o:['6 个','4 个','8 个','3 个'],a:0,exp:'前后左右上下，一共 6 个面。'},
- ]});
-kp({id:'sx1-lr',s:'sx',u:1,name:'左右以谁为准',
- lesson:'判断左右，要以「看的人」为准，不是以物体自己为准。还有一个规律：站在物体的前面和后面看（两个正对着的位置），看到的图形一般是左右相反的，就像照镜子。',
- items:[
+  {t:'mc',q:'站在一个固定位置看一个长方体盒子，最多能看到几个面？',o:['3 个','6 个','4 个','2 个'],a:0,exp:'最多 3 个：比如前面、上面、右面。后面、下面和另一个侧面都被挡住了。'},
   {t:'mc',q:'判断物体的左面、右面，要站在谁的角度？',o:['观察者（看的人）','物体自己','老师','都可以'],a:0,exp:'以看的人为准。'},
   {t:'mc',q:'小明站在物体前面看，小红站在物体后面看，他们看到的图形一般是？',o:['左右相反','完全一样','上下相反','颜色不同'],a:0,exp:'前面和后面正对着，看到的图形左右相反，像照镜子。'},
-  {t:'tf',q:'从物体的左面和右面观察，看到的图形一般左右相反。',a:true,exp:'左面和右面也是一对相对的位置，规律一样。'},
  ]});
 kp({id:'sx1-st',s:'sx',u:1,name:'常见几何体的视图',
- lesson:'四个几何体的「照片」：正方体，哪面看都是正方形。长方体，一般看到长方形（碰巧也可能是正方形）。圆柱，从上面看是圆，从前面看是长方形（碰巧也可能是正方形）。球最简单，从哪儿看都是圆。',
+ lesson:'四个几何体的「照片」：正方体，哪面看都是正方形。长方体，一般看到长方形（碰巧也可能是正方形）。圆柱，从上面看是圆，从前面看是长方形。球最简单，从哪儿看都是圆。看到一个正方形，别急着说是正方体，长方体也可能有正方形的面。',
+ lessonHtml:`<table class="ft"><tr><th></th><th>从前面 / 侧面看</th><th>从上面看</th></tr>
+  <tr><td>${svgSolid('cube')}</td><td>${svgShape('square')}</td><td>${svgShape('square')}</td></tr>
+  <tr><td>${svgSolid('cuboid')}</td><td>${svgShape('rect')}</td><td>${svgShape('rect')}</td></tr>
+  <tr><td>${svgSolid('cylinder')}</td><td>${svgShape('rect')}</td><td>${svgShape('circle')}</td></tr>
+  <tr><td>${svgSolid('sphere')}</td><td>${svgShape('circle')}</td><td>${svgShape('circle')}</td></tr></table>`,
  items:[
-  {t:'mc',q:'一个圆柱，从上面看是什么形状？',o:['圆形','长方形','正方形','三角形'],a:0,exp:'圆柱的上下底面是圆。'},
-  {t:'mc',q:'一个圆柱，从前面看是什么形状？',o:['长方形或正方形','圆形','三角形','梯形'],a:0,exp:'从侧面看圆柱，看到的是长方形（矮胖的圆柱可能是正方形）。'},
-  {t:'mc',q:'一个球，从任何方向看都是什么形状？',o:['圆形','正方形','椭圆','看方向'],a:0,exp:'球从哪儿看都是圆。'},
-  {t:'mc',q:'从前面看是正方形的立体图形，可能是哪个？',o:['正方体，也可能是长方体','只能是正方体','只能是球','只能是圆柱'],a:0,exp:'长方体也可能有一个面是正方形，光看一个面不能下结论。'},
+  ()=>{ const kind=['cube','cuboid','cylinder','sphere'][R_(0,3)]; const dir=['前面','上面','左面'][R_(0,2)];
+        const ans = kind==='cube'?'square': kind==='sphere'?'circle': kind==='cylinder'?(dir==='上面'?'circle':'rect'):'rect';
+        const others=Object.keys(SHAPES).filter(k=>k!==ans); const opts=shuffle([ans,...pick(others,2)]);
+        const why = kind==='cube'?'正方体每个面都是正方形。':kind==='sphere'?'球从哪儿看都是圆。':kind==='cylinder'?(dir==='上面'?'圆柱的上下底面是圆。':'从侧面看圆柱，看到的是长方形。'):'长方体的面是长方形（碰巧才是正方形）。';
+        return {kind:'choice',optHtml:true,html:svgSolid(kind),prompt:`这是一个${SOLIDS[kind]}。从<b>${dir}</b>看，看到的是什么形状？`,opts:opts.map(o=>svgShape(o)+`<span class="cap">${SHAPES[o]}</span>`),ans:opts.indexOf(ans),exp:why}; },
   {t:'tf',q:'看到一个面是正方形，这个立体图形一定是正方体。',a:false,exp:'不一定！长方体也可能有正方形的面。只看一个面不能确定。'},
+  {t:'mc',q:'从上面看是圆形，从前面看是长方形，这个立体图形是？',o:['圆柱','球','正方体','长方体'],a:0,exp:'上面是圆、前面是长方形，只有圆柱符合。'},
+  {t:'mc',q:'从上面看到一个圆，这个立体图形不可能是？',o:['正方体','球','圆柱','球或圆柱都可能'],a:0,exp:'正方体从哪儿看都是正方形，不可能看到圆。'},
  ]});
-kp({id:'sx1-sz',s:'sx',u:1,name:'骰子相对面的和是 7',
- lesson:'标准骰子上，正对着的两个面数字加起来总是 7：1 对 6，2 对 5，3 对 4。所以看到一个面是 3，它背面一定是 4。注意：这是标准骰子的规定，普通正方体没有这个特点。',
+kp({id:'sx1-sz',s:'sx',u:1,name:'骰子：对面加起来是 7',
+ lesson:'标准骰子上，正对着的两个面点数加起来总是 7：1 对 6，2 对 5，3 对 4。所以看到朝上的是 3，压在桌子上的一定是 4。注意：只有标准骰子这样，普通正方体没有这个规定。',
+ lessonHtml:`<div class="figrow">${svgDice(1,2,3)}<div class="cap2">上面 1，下面就是 6<br>前面 2，后面就是 5<br>右面 3，左面就是 4</div></div>`,
  items:[
-  {t:'mc',q:'标准骰子上，相对两个面的数字加起来是多少？',o:['7','6','8','10'],a:0,exp:'1+6、2+5、3+4，都等于 7。'},
-  {t:'num',q:'骰子朝上的面是 3，那么朝下的面是几？',a:4,exp:'7 − 3 = 4。'},
-  {t:'num',q:'骰子朝上的面是 1，那么朝下的面是几？',a:6,exp:'7 − 1 = 6。'},
-  {t:'num',q:'骰子前面是 5，它的后面是几？',a:2,exp:'7 − 5 = 2。'},
+  ()=>{ let t,f,r; do{ t=R_(1,6); f=R_(1,6); r=R_(1,6); }while(new Set([t,f,r,7-t,7-f,7-r]).size<6);
+        const ask=[['下面（压在桌子上的那一面）',7-t,`上面是 ${t}，7 − ${t} = ${7-t}。`],['后面',7-f,`前面是 ${f}，7 − ${f} = ${7-f}。`],['左面',7-r,`右面是 ${r}，7 − ${r} = ${7-r}。`]][R_(0,2)];
+        return {kind:'num',html:svgDice(t,f,r),prompt:`这是一个标准骰子。看不见的<b>${ask[0]}</b>是几点？`,ans:ask[1],exp:ask[2]}; },
+  {t:'mc',q:'标准骰子上，相对两个面的点数加起来是多少？',o:['7','6','8','10'],a:0,exp:'1+6、2+5、3+4，都等于 7。'},
   {t:'tf',q:'所有的正方体，相对两个面上的数字和都是 7。',a:false,exp:'只有标准骰子才有这个规定，普通正方体没有。'},
  ]});
-kp({id:'sx1-zh',s:'sx',u:1,name:'看拼搭的组合体',
- lesson:'几个小方块搭在一起，怎么看？从前面看：数有几列、每列几层。从上面看：看底下的方块怎么摆。从左面或右面看：数有几行、每行几层。被挡住的方块看不见，画图时不用画出来。',
+kp({id:'sx1-zh',s:'sx',u:1,name:'看拼搭的小方块',
+ lesson:'几个小方块搭在一起，怎么看？从前面看：数有几列、每列几层。从上面看：看底下的方块怎么摆。从左面看：数有几行、每行几层。被挡住的方块看不见，画图时不用画出来。有个小陷阱：从左面看时，离你最近的那一排会在图的左边。',
+ lessonHtml:(()=>{const Hm=[[2,0,1],[1,1,0]];const v=views(Hm);return `<div class="figrow">${svgCubes(Hm,20)}<div class="vlist"><div>从前面看${viewGrid(v.front)}</div><div>从上面看${viewGrid(v.top)}</div><div>从左面看${viewGrid(v.left)}</div></div></div>`;})(),
  items:[
+  ()=>{ const Hm=randLayout(false); const v=views(Hm);
+        const which=['front','top','left'][R_(0,2)]; const name={front:'前面',top:'上面',left:'左面'}[which];
+        const ans=gridKey(v[which]);
+        let cand=[v.front,v.top,v.left,v.right].filter(g=>gridKey(g)!==ans);
+        // 再造一个假的：把正确的翻转一下
+        const flip=v[which].map(r=>r.slice().reverse()); if(gridKey(flip)!==ans) cand.push(flip);
+        const uniq=[]; const seen=new Set([ans]); cand.forEach(g=>{const k=gridKey(g); if(!seen.has(k)){seen.add(k);uniq.push(g);}});
+        const opts=shuffle([v[which],...pick(uniq,Math.min(2,uniq.length))]);
+        const tip={front:'从前面看：数有几列，每列最高几层。',top:'从上面看：只看底下的方块摆在哪些格子上。',left:'从左面看：数有几行，每行最高几层；离你近的那排在左边。'}[which];
+        return {kind:'choice',optHtml:true,html:svgCubes(Hm),prompt:`从<b>${name}</b>看这堆小方块，看到的是哪个？`,opts:opts.map(g=>viewGrid(g)),ans:opts.findIndex(g=>gridKey(g)===ans),exp:tip}; },
+  ()=>{ const Hm=randLayout(true); const n=Hm.flat().reduce((a,b)=>a+b,0);
+        return {kind:'num',html:svgCubes(Hm),prompt:'数一数，这堆一共用了几个小方块？<span class="zh">一列一列数，别漏了下面垫着的</span>',ans:n,exp:`每一列从下往上数，加起来一共 ${n} 个。`}; },
   {t:'mc',q:'从前面观察拼搭的立体图形，主要看什么？',o:['有几列，每一列有几层','有几行','底面怎么摆','颜色'],a:0,exp:'前面看：数列数和每列的层数。'},
-  {t:'mc',q:'从上面观察拼搭的立体图形，主要看什么？',o:['底面方块怎么摆放','每列有几层','有几行','最高的那块'],a:0,exp:'从上面往下看，看到的是底面的摆放。'},
   {t:'tf',q:'画从某个方向看到的图形时，被挡住的方块也要画出来。',a:false,exp:'挡住的看不见，看不见就不画。'},
-  {t:'mc',q:'题目里几个同学围着物体看，怎么判断谁看到什么？',o:['想象自己站到那个同学的位置去看','随便选一个','看谁离得近','看谁个子高'],a:0,exp:'把自己「搬」到那个位置，想象看到的样子。'},
  ]});
 kp({id:'sx1-zk',s:'sx',u:1,name:'长方体展开图',
- lesson:'把一个长方体纸盒剪开摊平，就是展开图。长方体有 6 个面，正对着的两个面一模一样，而且永远不挨着。要把没开口的盒子摊平，至少要剪开 7 条棱，剪法不同，摊出来的形状也不同。',
+ lesson:'把一个长方体纸盒剪开摊平，就是展开图。长方体有 6 个面，正对着的两个面一模一样，而且永远不挨着。要把没开口的盒子摊平，至少要剪开 7 条棱；剪法不同，摊出来的形状也不同。',
+ lessonHtml:`<div class="figrow">${svgSolid('cuboid')}<span class="arrow">剪开 7 条棱 →</span>${svgNetPlain([[1,0],[0,1],[1,1],[2,1],[3,1],[1,2]])}</div>`,
  items:[
   {t:'mc',q:'长方体一共有几个面？',o:['6 个','4 个','8 个','12 个'],a:0,exp:'上下、前后、左右，一共 6 个面。'},
   {t:'mc',q:'长方体相对的两个面有什么关系？',o:['完全相同，而且不相邻','大小不同','挨在一起','一定是正方形'],a:0,exp:'相对的面一模一样，并且永远不挨着。'},
@@ -547,71 +711,165 @@ kp({id:'sx1-zk',s:'sx',u:1,name:'长方体展开图',
   {t:'tf',q:'同一个长方体纸盒，不管怎么剪，展开图的形状都一样。',a:false,exp:'剪的棱不一样，摊开的形状就不一样。'},
   {t:'tf',q:'展开纸盒时，每个面至少要有一条边和别的面连着。',a:true,exp:'不能剪散，面和面要连着，才叫展开图。'},
  ]});
-kp({id:'sx1-zf',s:'sx',u:1,name:'正方体展开图',
- lesson:'6 个正方形拼在一起，有的能折成正方体，有的不能。最好记的口诀：「田字格」不能折（四个格子拼成田字的，折起来会有两个面重叠）。找相对面的规律：挨在一起的两个面是相邻面，永远不可能是相对面。',
+kp({id:'sx1-zf',s:'sx',u:1,name:'正方体展开图：找对面',
+ lesson:'6 个正方形拼在一起，有的能折成正方体，有的不能。口诀：「田字格」不能折，一排最多四个。找对面的规律：挨在一起的两个面折起来是邻居，永远不可能是对面；一排里隔一个的两个面才是对面。',
+ lessonHtml:`<div class="figrow">${svgNet(NETS[0],['A','B','C','D','E','F'])}<div class="cap2">C 和 E 中间隔着 D，它们是对面<br>B 和 D 隔着 C，也是对面<br>A 和 F 一上一下，是对面</div></div>`,
  items:[
+  ()=>{ const net=NETS[R_(0,NETS.length-1)]; const letters=shuffle(['A','B','C','D','E','F']);
+        const i=R_(0,5); const pair=net.opp.find(p=>p.includes(i)); const j=pair[0]===i?pair[1]:pair[0];
+        const others=[0,1,2,3,4,5].filter(x=>x!==i&&x!==j); const opts=shuffle([j,...pick(others,2)]);
+        return {kind:'choice',html:svgNet(net,letters),prompt:`把它折成正方体，<b>${letters[i]}</b> 的对面是哪个？`,opts:opts.map(o=>letters[o]),ans:opts.indexOf(j),exp:`和 ${letters[i]} 挨着的都是邻居，不可能是对面。隔一个的 ${letters[j]} 才是它的对面。`}; },
   {t:'mc',q:'含有「田字格」的平面图形，能折成正方体吗？',o:['不能','能','有时能','看大小'],a:0,exp:'田字格折起来会有面重叠，折不成。'},
-  {t:'mc',q:'在正方体展开图里，挨在一起的两个面折起来后是？',o:['相邻面','相对面','同一个面','不确定'],a:0,exp:'挨着的折起来还是挨着，是相邻面，不可能是相对面。'},
-  {t:'tf',q:'正方体展开图中，相邻的两个面一定不是相对面。',a:true,exp:'这是找对面的关键规律。'},
-  {t:'mc',html:'<div class="net" style="grid-template-columns:repeat(4,26px)"><i class="o"></i><i></i><i class="o"></i><i class="o"></i><i></i><i></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i class="o"></i></div>',q:'上面这个图形能折成正方体吗？',o:['能','不能'],a:0,exp:'中间一排四个，上下各一个，这是最常见的能折成正方体的样子（1-4-1 型）。'},
-  {t:'mc',html:'<div class="net" style="grid-template-columns:repeat(4,26px)"><i></i><i></i><i class="o"></i><i class="o"></i><i></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i></i><i></i><i class="o"></i></div>',q:'上面这个图形能折成正方体吗？',o:['不能','能'],a:0,exp:'左上角是一个田字格，折起来会重叠，不能折成正方体。'},
-  {t:'mc',html:'<div class="net" style="grid-template-columns:repeat(4,26px)"><i></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i></i><i></i></div>',q:'上面这个图形能折成正方体吗？',o:['能','不能'],a:0,exp:'像楼梯一样 2-2-2 排列，能折成正方体。'},
-  {t:'mc',html:'<div class="net" style="grid-template-columns:repeat(5,26px)"><i></i><i></i><i></i><i></i><i></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i><i class="o"></i></div>',q:'上面这个图形能折成正方体吗？',o:['不能','能'],a:0,exp:'一排有 5 个，折起来两头会撞在一起。一排最多只能有 4 个。'},
+  {t:'mc',html:svgNetPlain([[1,0],[0,1],[1,1],[2,1],[3,1],[1,2]]),q:'上面这个图形能折成正方体吗？',o:['能','不能'],a:0,exp:'中间一排四个，上下各一个，这是最常见的能折成正方体的样子。'},
+  {t:'mc',html:svgNetPlain([[0,0],[1,0],[0,1],[1,1],[2,1],[1,2]]),q:'上面这个图形能折成正方体吗？',o:['不能','能'],a:0,exp:'左上角是一个田字格，折起来会重叠，不能折成正方体。'},
+  {t:'mc',html:svgNetPlain([[0,0],[1,0],[1,1],[2,1],[2,2],[3,2]]),q:'上面这个图形能折成正方体吗？',o:['能','不能'],a:0,exp:'像楼梯一样 2-2-2 排列，能折成正方体。'},
+  {t:'mc',html:svgNetPlain([[0,0],[1,0],[2,0],[3,0],[4,0],[2,1]]),q:'上面这个图形能折成正方体吗？',o:['不能','能'],a:0,exp:'一排有 5 个，折起来两头会撞在一起。一排最多只能有 4 个。'},
  ]});
 kp({id:'sx1-tl',s:'sx',u:1,name:'视图推理',
  lesson:'只告诉你「从上面看是一个正方形」，能猜出是什么立体图形吗？不能！可能是正方体，也可能是长方体。一个方向的图只能帮你排除一些（比如肯定不是球），多看几个方向，才能一点点缩小范围。',
+ lessonHtml:`<div class="figrow">${svgShape('square')}<span class="arrow">可能是 →</span>${svgSolid('cube')}<span class="arrow">也可能是 →</span>${svgSolid('cuboid')}</div>`,
  items:[
   {t:'tf',q:'只知道从一个方向看到的图形，就能确定这个立体图形的唯一形状。',a:false,exp:'一个方向不够，有很多种搭法都可能看到同样的图。'},
-  {t:'mc',q:'从上面看到一个圆，这个立体图形不可能是？',o:['正方体','球','圆柱','以上都可能'],a:0,exp:'正方体从哪儿看都是正方形，不可能看到圆。'},
   {t:'mc',q:'想更准确地知道立体图形的样子，应该？',o:['结合多个方向看到的图形','只看前面','只看上面','猜一个'],a:0,exp:'多个方向的图合在一起，范围就越来越小。'},
-  {t:'mc',q:'从上面看是圆形，从前面看是长方形，这个立体图形是？',o:['圆柱','球','正方体','长方体'],a:0,exp:'上面是圆、前面是长方形，只有圆柱符合。'},
+  ()=>{ const Hm=randLayout(false); const v=views(Hm);
+        // 找一个不同的搭法，前视图一样
+        let alt=null; for(let k=0;k<40&&!alt;k++){ const H2=randLayout(false); if(gridKey(views(H2).front)===gridKey(v.front)&&JSON.stringify(H2)!==JSON.stringify(Hm)) alt=H2; }
+        if(!alt) return {kind:'choice',html:viewGrid(v.front),prompt:'这是从前面看到的图。只凭这一张图，能确定小方块是怎么搭的吗？',opts:['不能，可能有好几种搭法','能，只有一种搭法'],ans:0,exp:'只有一个方向的图，后面藏着几个方块看不出来。'};
+        return {kind:'choice',html:`<div class="figrow">${svgCubes(Hm,18)}${svgCubes(alt,18)}</div>`,prompt:'这两堆小方块搭得不一样。从<b>前面</b>看，它们看到的图形一样吗？',opts:['一样','不一样'],ans:0,exp:'从前面看只能看到每列多高，后面藏了几个看不出来，所以两堆看起来一样。这就是为什么一个方向不够。'}; },
  ]});
 
-/* ---------------- 数学 · 第二单元 混合运算 ---------------- */
+/* ================== 第二单元 · 混合运算 ================== */
+function calcCore(mode){
+  let a,b,c,expr,first,wrong,v1,val,why;
+  if(mode==='same'){
+    const t=R_(0,2);
+    if(t===0){ a=R_(12,60); b=R_(11,40); c=R_(5,Math.min(a+b,60)); expr=`${a}+${b}-${c}`; first=`${a} + ${b}`; wrong=`${b} − ${c}`; v1=a+b; val=a+b-c; }
+    else if(t===1){ a=R_(30,90); b=R_(5,a-10); c=R_(5,40); expr=`${a}-${b}+${c}`; first=`${a} − ${b}`; wrong=`${b} + ${c}`; v1=a-b; val=a-b+c; }
+    else { b=R_(2,9); const q=R_(2,9); a=b*q; c=R_(2,9); expr=`${a}/${b}*${c}`; first=`${a} ÷ ${b}`; wrong=`${b} × ${c}`; v1=q; val=q*c; }
+    why='只有加减（或只有乘除），从左往右算';
+  } else if(mode==='two'){
+    const t=R_(0,3);
+    if(t===0){ b=R_(2,9); c=R_(2,9); a=R_(b*c+1,b*c+40); expr=`${a}-${b}*${c}`; first=`${b} × ${c}`; wrong=`${a} − ${b}`; v1=b*c; val=a-b*c; }
+    else if(t===1){ a=R_(10,50); b=R_(2,9); c=R_(2,9); expr=`${a}+${b}*${c}`; first=`${b} × ${c}`; wrong=`${a} + ${b}`; v1=b*c; val=a+b*c; }
+    else if(t===2){ b=R_(2,9); const q=R_(2,9); a=b*q; c=R_(3,30); expr=`${a}/${b}+${c}`; first=`${a} ÷ ${b}`; wrong=`${b} + ${c}`; v1=q; val=q+c; }
+    else { c=R_(2,9); const q=R_(2,9); b=c*q; a=R_(q+1,q+50); expr=`${a}-${b}/${c}`; first=`${b} ÷ ${c}`; wrong=`${a} − ${b}`; v1=q; val=a-q; }
+    why='有乘除也有加减，先算乘除';
+  } else {
+    const t=R_(0,3);
+    if(t===0){ a=R_(2,9); b=R_(1,9); c=R_(1,9); expr=`${a}*(${b}+${c})`; first=`${b} + ${c}`; wrong=`${a} × ${b}`; v1=b+c; val=a*v1; }
+    else if(t===1){ c=R_(2,9); const q=R_(2,9); b=R_(1,c*q-1); a=c*q-b; expr=`(${a}+${b})/${c}`; first=`${a} + ${b}`; wrong=`${b} ÷ ${c}`; v1=a+b; val=q; }
+    else if(t===2){ c=R_(2,9); const q=R_(2,9); b=R_(5,40); a=c*q+b; expr=`(${a}-${b})/${c}`; first=`${a} − ${b}`; wrong=`${b} ÷ ${c}`; v1=a-b; val=q; }
+    else { const d=R_(2,9); const q=R_(2,9); a=d*q; c=R_(1,d-1); b=d+c; expr=`${a}/(${b}-${c})`; first=`${b} − ${c}`; wrong=`${a} ÷ ${b}`; v1=d; val=q; }
+    why='有小括号，先算括号里面';
+  }
+  const shown=fmt(expr);
+  const line1=shown.replace(first,String(v1)).replace(/\((\d+)\)/,'$1');
+  const nums=expr.match(/\d+/g); let extra=`${nums[0]} ${mode==='same'?'×':'+'} ${nums[2]}`; if(extra===first||extra===wrong) extra=`${nums[0]} − ${nums[2]}`;
+  return {shown,first,wrong,extra,v1,line1,val,why};
+}
+function calcSteps(mode){
+  const c=calcCore(mode);
+  const opts=shuffle([c.first,c.wrong,c.extra]);
+  return {kind:'steps',prompt:`<span class="big">${c.shown}</span><span class="zh">一步一步来，像在本子上写脱式一样</span>`,
+    board:[c.shown],
+    steps:[
+      {kind:'choice',q:'第一步先算哪部分？',opts,ans:opts.indexOf(c.first),hint:`${c.why}，所以先算 ${c.first}。`,after:null,mark:c.first},
+      {kind:'num',q:`算出来：<b>${c.first}</b> = ?`,ans:c.v1,hint:`${c.first} = ${c.v1}。`,after:`= ${c.line1}`},
+      {kind:'num',q:`再算：<b>${c.line1}</b> = ?`,ans:c.val,hint:`${c.line1} = ${c.val}。`,after:`= ${c.val}`},
+    ],
+    exp:`回头检查：①${c.why}，先算了 ${c.first} ✓ ②等号对齐，没算的数原样抄下来 ✓ ③结果 ${c.val}。`};
+}
+function storySteps(){
+  const t=R_(0,2); let s;
+  if(t===0){ const c=R_(3,9),k=R_(4,12),b=R_(20,80),a=b+c*k;
+    s={text:`果园摘了 ${a} 个西瓜，已经运走 ${b} 个。剩下的每 ${c} 个装一筐，可以装几筐？`,
+       bar:svgBar(`摘了 ${a} 个`,`运走 ${b} 个`,`剩下 ? 个`,`每 ${c} 个一筐 → ? 筐`),
+       mid:'剩下多少个西瓜',midWrong:['每筐装几个','一共摘了几个'],
+       e1:`${a} − ${b}`,v1:a-b,u1:'个',e2:`${a-b} ÷ ${c}`,v2:k,u2:'筐',
+       right:`(${a} − ${b}) ÷ ${c}`,wrongs:[`${a} − ${b} ÷ ${c}`,`${a} ÷ ${c} − ${b}`],
+       bracket:'要先算减法，减法得加括号，不然别人会先算除法',
+       check:`检验：${k} 筐 × ${c} 个 = ${c*k} 个，${c*k} + ${b} = ${a} 个，和题目对上了 ✓　答：可以装 ${k} 筐。`}; }
+  else if(t===1){ const a=R_(3,8),b=R_(2,9),ch=R_(2,30),m=a*b+ch;
+    s={text:`小明买了 ${a} 本练习本，每本 ${b} 元。他付了 ${m} 元，应该找回多少元？`,
+       bar:svgBar(`付了 ${m} 元`,`${a} 本 × ${b} 元 = ? 元`,`找回 ? 元`,''),
+       mid:'买本子一共花了多少元',midWrong:['一本多少元','找回多少元'],
+       e1:`${a} × ${b}`,v1:a*b,u1:'元',e2:`${m} − ${a*b}`,v2:ch,u2:'元',
+       right:`${m} − ${a} × ${b}`,wrongs:[`(${m} − ${a}) × ${b}`,`${m} − ${a} + ${b}`],
+       bracket:'乘法本来就先算，不用加括号',
+       check:`检验：花了 ${a*b} 元，加上找回的 ${ch} 元，正好 ${m} 元 ✓　答：找回 ${ch} 元。`}; }
+  else { const c=R_(3,9),k=R_(2,9),r=R_(1,c-1),a=c*k+r;
+    s={text:`一共有 ${a} 个苹果，分给 ${c} 个小朋友，每人 ${k} 个，还剩几个？`,
+       bar:svgBar(`一共 ${a} 个`,`${c} 人 × ${k} 个 = ? 个`,`剩下 ? 个`,''),
+       mid:'一共分掉了多少个',midWrong:['每人分几个','还剩几个'],
+       e1:`${c} × ${k}`,v1:c*k,u1:'个',e2:`${a} − ${c*k}`,v2:r,u2:'个',
+       right:`${a} − ${c} × ${k}`,wrongs:[`(${a} − ${c}) × ${k}`,`${a} ÷ ${c} − ${k}`],
+       bracket:'乘法本来就先算，不用加括号',
+       check:`检验：分掉 ${c*k} 个，加上剩下的 ${r} 个，正好 ${a} 个 ✓　答：还剩 ${r} 个。`}; }
+  const o1=shuffle([s.mid,...s.midWrong]); const o4=shuffle([s.right,...s.wrongs]);
+  return {kind:'steps',html:s.bar,prompt:`${s.text}<span class="zh">读题 → 看图 → 找中间量 → 列式 → 检验</span>`,board:[],
+    steps:[
+      {kind:'choice',q:'问的是最后那个「?」。要算它，先得知道什么？',opts:o1,ans:o1.indexOf(s.mid),hint:`从问题往回想：要算「${s.text.split('，').pop().replace('？','')}」，得先知道${s.mid}。`,after:`① 先算${s.mid}`},
+      {kind:'num',q:`${s.mid}：<b>${s.e1}</b> = ?`,ans:s.v1,hint:`${s.e1} = ${s.v1}。`,after:`　 ${s.e1} = ${s.v1}（${s.u1}）`},
+      {kind:'num',q:`再算最后要的：<b>${s.e2}</b> = ?`,ans:s.v2,hint:`${s.e2} = ${s.v2}。`,after:`② ${s.e2} = ${s.v2}（${s.u2}）`},
+      {kind:'choice',q:'把两步合成一个算式，选哪个？',opts:o4,ans:o4.indexOf(s.right),hint:s.bracket+'。',after:`综合算式：${s.right} = ${s.v2}`},
+    ],
+    exp:s.check};
+}
 kp({id:'sx2-jb',s:'sx',u:2,name:'一级运算和二级运算',
- lesson:'加法、减法是「一级运算」，乘法、除法是「二级运算」。记法：二级比一级「高一级」，所以算的时候先算高的（乘除），再算低的（加减）。',
+ lesson:'加法、减法是「一级运算」，乘法、除法是「二级运算」。记法：二级比一级「高一级」，算的时候先算高的（乘除），再算低的（加减）。就像排队，级别高的先上。',
  items:[
   {t:'mc',q:'加法和减法叫什么运算？',o:['一级运算','二级运算','高级运算','混合运算'],a:0,exp:'加减是一级。'},
   {t:'mc',q:'乘法和除法叫什么运算？',o:['二级运算','一级运算','三级运算','简便运算'],a:0,exp:'乘除是二级，比加减高一级，所以先算。'},
   {t:'mc',q:'下面哪个算式只有二级运算？',o:['25 ÷ 5 × 3','24 + 15 − 13','49 ÷ 7 + 9','28 − 6 × 3'],a:0,exp:'只有乘和除的是二级运算。'},
  ]});
-kp({id:'sx2-tj',s:'sx',u:2,name:'同级运算：从左往右',lesson:'算式里只有加减，或者只有乘除，就叫同级运算。规则最简单：从左往右，一步一步算。比如 24 + 15 − 13，先算 24 + 15 = 39，再算 39 − 13 = 26。',gen:'same'});
-kp({id:'sx2-lj',s:'sx',u:2,name:'两级运算：先乘除后加减',lesson:'既有乘除又有加减，就不能从左往右硬算了。先算乘除，再算加减。比如 28 − 6 × 3：先算 6 × 3 = 18，再算 28 − 18 = 10。谁要是先算 28 − 6，就掉坑里了。',gen:'two'});
-kp({id:'sx2-kh',s:'sx',u:2,name:'小括号：先算括号里',lesson:'小括号是「插队卡」：有它就先算它里面的。5 × (4 + 2)，先算 4 + 2 = 6，再算 5 × 6 = 30。反过来想：如果题目要求先算加减、再算乘除，就必须给加减加上小括号，不然别人会先算乘除。',gen:'br'});
+kp({id:'sx2-tj',s:'sx',u:2,name:'同级运算：从左往右',
+ lesson:'算式里只有加减，或者只有乘除，叫同级运算。规则最简单：从左往右，一步一步算。写脱式的时候：第一行抄题，下面每一行等号对齐，没算到的数原样抄下来。',
+ lessonHtml:work(['24 + 15 − 13','= 39 − 13','= 26']),
+ items:[()=>calcSteps('same')]});
+kp({id:'sx2-lj',s:'sx',u:2,name:'两级运算：先乘除后加减',
+ lesson:'既有乘除又有加减，就不能从左往右硬算了。先算乘除，再算加减。谁要是拿到 28 − 6 × 3 先算 28 − 6，就掉坑里了。写脱式：先算的那一步先变成数，其他原样抄。',
+ lessonHtml:work(['28 − 6 × 3','= 28 − 18','= 10']),
+ items:[()=>calcSteps('two')]});
+kp({id:'sx2-kh',s:'sx',u:2,name:'小括号：先算括号里',
+ lesson:'小括号是「插队卡」：有它就先算它里面的。5 × (4 + 2)，先算 4 + 2 = 6，再算 5 × 6 = 30。反过来想：如果题目要求先算加减、再算乘除，就必须给加减加上小括号，不然别人会先算乘除。',
+ lessonHtml:work(['5 × (4 + 2)','= 5 × 6','= 30']),
+ items:[()=>calcSteps('br')]});
 kp({id:'sx2-gf',s:'sx',u:2,name:'脱式计算的规矩',
  lesson:'脱式计算就是一步一步往下写。三条规矩：等号要上下对齐；这一步没算的数和符号，要原样抄下来；不能跳步。跳步、漏抄、等号歪掉，是最常见的三个错。',
+ lessonHtml:`<div class="figrow">${work(['28 − 6 × 3','= 28 − 18','= 10'])}<div class="cap2">✓ 等号对齐<br>✓ 28 − 原样抄下来<br>✓ 一步一行不跳步</div></div>`,
  items:[
   {t:'tf',q:'脱式计算时，等号要上下对齐。',a:true,exp:'等号对齐，一步一步，看着就清楚。'},
   {t:'tf',q:'脱式计算时，不参与这一步计算的数和符号可以先不写，最后再补。',a:false,exp:'要原样抄写，漏抄了下一步就不知道算什么了。'},
-  {t:'mc',q:'脱式计算最容易犯的错误不包括哪个？',o:['把数字写得太大','跳步','漏抄数字或符号','等号不对齐'],a:0,exp:'跳步、漏抄、等号不对齐是三大常见错。'},
-  {t:'mc',q:'算 28 − 6 × 3，第一步应该写成？',o:['= 28 − 18','= 22 × 3','= 28 − 6','= 18'],a:0,exp:'先算 6 × 3 = 18，没算的 28 − 原样抄下来。'},
+  {t:'mc',q:'算 28 − 6 × 3，第一行下面应该写成？',o:['= 28 − 18','= 22 × 3','= 28 − 6','= 18'],a:0,exp:'先算 6 × 3 = 18，没算的 28 − 原样抄下来。'},
+  {t:'mc',html:work(['49 ÷ 7 + 9','= 7 + 9 = 16']),q:'上面这个脱式哪里不对？',o:['跳步了，应该分两行写','等号不对齐','先算错了','没有错'],a:0,exp:'一步一行。应该写成「= 7 + 9」再换一行「= 16」。'},
  ]});
 kp({id:'sx2-jz',s:'sx',u:2,name:'简便计算：连减和连除',
- lesson:'连着减两个数，等于减去这两个数的和：98 − 23 − 17 = 98 − (23 + 17)。想一想：你有 98 元，先花 23，再花 17，和一次花掉 40，剩的一样多。连除也一样：16 ÷ 2 ÷ 2 = 16 ÷ (2 × 2)。',
+ lesson:'连着减两个数，等于减去这两个数的和：98 − 23 − 17 = 98 − (23 + 17)。想一想：你有 98 元，先花 23，再花 17，和一次花掉 40，剩的一样多。连除也一样：16 ÷ 2 ÷ 2 = 16 ÷ (2 × 2)。什么时候用？后面两个数凑起来是整十整百的时候最划算。',
+ lessonHtml:`<div class="figrow">${work(['98 − 23 − 17','= 98 − (23 + 17)','= 98 − 40','= 58'])}${work(['16 ÷ 2 ÷ 2','= 16 ÷ (2 × 2)','= 16 ÷ 4','= 4'])}</div>`,
  items:[
   {t:'num',q:'98 − 23 − 17 = 98 − (23 + □)，□ 里填几？',a:17,exp:'连减两个数 = 减去两个数的和。'},
   {t:'num',q:'16 ÷ 2 ÷ 2 = 16 ÷ (2 × □)，□ 里填几？',a:2,exp:'连除两个数 = 除以两个数的积。'},
-  {t:'num',q:'用简便方法算：98 − 23 − 17 = ?',a:58,exp:'98 − (23 + 17) = 98 − 40 = 58。'},
-  {t:'num',q:'用简便方法算：56 − 18 − 22 = ?',a:16,exp:'18 + 22 = 40，56 − 40 = 16。'},
-  {t:'num',q:'算一算：36 ÷ 3 ÷ 3 = ?',a:4,exp:'36 ÷ (3 × 3) = 36 ÷ 9 = 4。'},
+  ()=>{ const p=[[23,17],[18,22],[36,14],[45,15],[27,13],[52,28]][R_(0,5)]; const a=R_(p[0]+p[1]+5,99); const o=shuffle([`${a} − (${p[0]} + ${p[1]})`,`${a} − (${p[0]} − ${p[1]})`,`${a} + (${p[0]} − ${p[1]})`]);
+        return {kind:'steps',prompt:`<span class="big">${a} − ${p[0]} − ${p[1]}</span><span class="zh">用简便方法，两步搞定</span>`,board:[`${a} − ${p[0]} − ${p[1]}`],
+          steps:[{kind:'choice',q:'连减两个数，可以先把它们……？',opts:o,ans:o.indexOf(`${a} − (${p[0]} + ${p[1]})`),hint:'连减 = 减去它们的和，中间是加号。',after:`= ${a} − (${p[0]} + ${p[1]})`},
+                 {kind:'num',q:`括号里：${p[0]} + ${p[1]} = ?`,ans:p[0]+p[1],hint:`${p[0]} + ${p[1]} = ${p[0]+p[1]}，凑成整十了。`,after:`= ${a} − ${p[0]+p[1]}`},
+                 {kind:'num',q:`${a} − ${p[0]+p[1]} = ?`,ans:a-p[0]-p[1],hint:`${a} − ${p[0]+p[1]} = ${a-p[0]-p[1]}。`,after:`= ${a-p[0]-p[1]}`}],
+          exp:`两个数凑成 ${p[0]+p[1]}，一下就减掉了，这就是「简便」的意思。`}; },
   {t:'mc',q:'a − b − c 等于下面哪个？',o:['a − (b + c)','a − (b − c)','a + (b − c)','(a − b) + c'],a:0,exp:'连减两个数，等于减去它们的和。'},
  ]});
 kp({id:'sx2-bz',s:'sx',u:2,name:'解决问题五步',
- lesson:'遇到应用题不慌，五步走：一读题，二画图，三找数量关系，四列式解答，五检验反思。最容易漏的是第五步：做完回头看一眼，运算顺序对不对、结果合不合理。',
+ lesson:'遇到应用题不慌，五步走：一读题，二画图，三找数量关系，四列式解答，五检验反思。最容易漏的是第五步：做完回头看一眼，把答案带回题目里对一对。',
  items:[
   {t:'order',tokens:['读题','画图','找数量关系','列式解答','检验反思'],zh:'把解决问题的五个步骤按顺序排好',exp:'一读题、二画图、三找关系、四列式、五检验。'},
-  {t:'mc',q:'解决问题的第一步是？',o:['读题','列式','画图','检验'],a:0,exp:'先把题读明白。'},
-  {t:'mc',q:'做完题以后回头看看运算顺序和结果对不对，这是哪一步？',o:['检验反思','读题','画图','找数量关系'],a:0,exp:'最后一步，检验反思，最容易被跳过。'},
- ]});
-kp({id:'sx2-ff',s:'sx',u:2,name:'三种解题方法',
- lesson:'三种想法。综合法：从「已知条件」出发，一步步往前推，先算出中间的量，最后得到答案。分析法：从「问题」出发，倒过来想，要算这个需要知道什么？再回题目里找。画图法：画线段图，把数量关系画出来看。',
- items:[
+  {t:'mc',q:'做完题以后，把答案带回题目里对一对，这是哪一步？',o:['检验反思','读题','画图','找数量关系'],a:0,exp:'最后一步，检验反思，最容易被跳过。'},
   {t:'mc',q:'从已知条件出发，一步步算出中间量，最后解决问题，这是什么方法？',o:['综合法','分析法','画图法','猜测法'],a:0,exp:'综合法：从条件往前推。'},
   {t:'mc',q:'先看最后要解决什么问题，再想需要哪些条件，回题目里找，这是什么方法？',o:['分析法','综合法','画图法','列表法'],a:0,exp:'分析法：从问题往回想。'},
   {t:'mc',q:'画线段图把题目条件画出来，理清数量关系，这是什么方法？',o:['画图法','综合法','分析法','口算法'],a:0,exp:'画图法：看得见就想得清。'},
-  {t:'mc',q:'「摘了 105 个西瓜，运走 57 个，剩下每 6 个装一筐，能装几筐？」用分析法，先想的是？',o:['要求装几筐，得先知道剩下多少个西瓜','105 − 57 是多少','每筐 6 个','西瓜好不好吃'],a:0,exp:'分析法从问题入手：装几筐 = 剩下的 ÷ 6，所以先要知道剩下的。'},
  ]});
-kp({id:'sx2-yy',s:'sx',u:2,name:'两步应用题',lesson:'两步应用题的关键是找到「中间量」。摘了 105 个西瓜，运走 57 个，剩下每 6 个装一筐，装几筐？中间量是「剩下多少个」：105 − 57 = 48。再算 48 ÷ 6 = 8 筐。列成一个算式要加括号：(105 − 57) ÷ 6，因为要先算减法。',gen:'story'});
+kp({id:'sx2-yy',s:'sx',u:2,name:'两步应用题',
+ lesson:'两步应用题的关键是找到「中间量」，就是题目没直接问、但不算出来就走不下去的那个数。画一条线段图，整条是总数，分成两段，一眼就看出缺哪一段。算完一定把答案带回去检验。',
+ lessonHtml:`<div class="figrow">${svgBar('摘了 105 个','运走 57 个','剩下 ? 个','每 6 个一筐 → ? 筐')}${work(['(105 − 57) ÷ 6','= 48 ÷ 6','= 8（筐）'])}</div>`,
+ items:[()=>storySteps()]});
 /* ================= 题库 · 英语 =================
    单词 KP：{word:{en,zh,ex}}，引擎自动生成 中→英 / 英→中 / 听音选词 / 字母拼词 四种问法
    ================================================ */
@@ -941,14 +1199,16 @@ function makeItem(k){
   if(k.word) return wordItem(k);
   if(k.gen==='story') return genStory();
   if(k.gen) return genCalc(k.gen);
-  const it = k.items[rnd(k.items.length)];
+  const raw = k.items[rnd(k.items.length)];
+  const it = typeof raw==='function' ? raw() : raw;
+  if(it.kind) return it;
   const en = !!it.en;
   if(it.t==='mc'){
     const o = it.o.map((s,i)=>({s,i}));
     const sh = shuffle(o);
     return {kind:'choice',en,html:it.html,prompt:it.q,opts:sh.map(x=>x.s),ans:sh.findIndex(x=>x.i===it.a),exp:it.exp};
   }
-  if(it.t==='tf') return {kind:'choice',prompt:it.q+'<span class="zh">对不对？</span>',opts:['对 ✓','错 ✗'],ans:it.a?0:1,exp:it.exp,two:true};
+  if(it.t==='tf') return {kind:'choice',html:it.html,prompt:it.q+'<span class="zh">对不对？</span>',opts:['对 ✓','错 ✗'],ans:it.a?0:1,exp:it.exp,two:true};
   if(it.t==='blank'){
     const m = it.q.match(/【(.+?)】/); const a = m[1];
     const prompt = it.q.replace(/【.+?】/,'<span class="blank">&nbsp;</span>');
@@ -956,7 +1216,7 @@ function makeItem(k){
     return {kind:'choice',prompt,opts:o,ans:o.indexOf(a),exp:it.exp,two:true,fill:a};
   }
   if(it.t==='order') return {kind:'tiles',en,prompt:esc(it.zh),tokens:shuffle(it.tokens),ans:it.tokens.join(en?' ':''),join:en?' ':'',exp:it.exp,zhTiles:!en,speakAfter:en?{t:it.exp,l:'en'}:null};
-  if(it.t==='num') return {kind:'num',prompt:it.q,ans:it.a,exp:it.exp};
+  if(it.t==='num') return {kind:'num',html:it.html,prompt:it.q,ans:it.a,exp:it.exp};
 }
 
 /* ---------- 组关卡 ---------- */
@@ -1013,30 +1273,43 @@ function renderLesson(k, go){
     <div class="tag"><span class="pill ${k.s}">${SUBJ[k.s].name}</span>新知识点 · 第 ${k.u} 单元</div>
     <h2 style="font-size:26px">${esc(k.name)}</h2>
     <p style="font-size:18px;line-height:1.7;color:var(--ink2)">${esc(k.lesson)}</p>
+    ${k.lessonHtml?`<div class="lfig">${k.lessonHtml}</div>`:''}
     ${k.word?`<button class="spk" id="spk">🔊 听一听 <span class="en">${esc(k.word.en)}</span></button>`:''}
     <div class="acts"><button class="btn big" id="go">明白了，出题 ▸</button></div>`;
   const sp=$('#spk'); if(sp){ sp.onclick=()=>say(k.word.en,'en'); setTimeout(()=>say(k.word.en,'en'),300); }
   $('#go').onclick=go;
 }
+function lessonSheet(k){
+  openSheet(`<h2>${esc(k.name)}</h2><p style="font-size:17px;line-height:1.7;color:var(--ink2)">${esc(k.lesson)}</p>${k.lessonHtml?`<div class="lfig">${k.lessonHtml}</div>`:''}<div class="acts" style="margin-top:14px"><button class="btn sm" onclick="closeSheet()">知道了</button></div>`);
+}
+function optsHtml(it, cls){
+  return `<div class="opts ${it.two||it.opts.length===2?'two':''} ${it.optHtml?'has-html':''}" id="${cls||'opts'}">${it.opts.map((o,i)=>`<button class="opt ${it.en?'en':''} ${it.optHtml?'html':''}" data-i="${i}"><span class="k">${'ABCD'[i]}</span><span>${it.en?esc(o):o}</span></button>`).join('')}</div>`;
+}
+function numpadHtml(){ return `<div class="numin" id="numin">&nbsp;</div><div class="numpad">${[1,2,3,4,5,6,7,8,9,'⌫',0,'✓'].map(n=>`<button data-n="${n}">${n}</button>`).join('')}</div>`; }
+function bindNumpad(root, onSubmit){
+  let v='';
+  root.querySelectorAll('.numpad button').forEach(b=>b.onclick=()=>{
+    if(Q.answered) return; const n=b.dataset.n;
+    if(n==='⌫') v=v.slice(0,-1); else if(n==='✓'){ if(v!=='') onSubmit(+v); return; } else if(v.length<5) v+=n;
+    root.querySelector('#numin').innerHTML = v||'&nbsp;';
+  });
+}
 function renderQ(k){
   const it=Q.item, c=$('#qcard');
+  if(it.kind==='steps') return renderSteps(k);
   let body='';
-  if(it.kind==='choice'){
-    body = `<div class="opts ${it.two||it.opts.length===2?'two':''}" id="opts">${it.opts.map((o,i)=>`<button class="opt ${it.en?'en':''}" data-i="${i}"><span class="k">${'ABCD'[i]}</span><span>${it.en?esc(o):o}</span></button>`).join('')}</div>`;
-  } else if(it.kind==='tiles'){
-    body = `<div class="answer-row" id="arow"></div><div class="tiles" id="tiles">${it.tokens.map((t,i)=>`<button class="tile ${it.zhTiles?'zh':''}" data-i="${i}">${esc(t)}</button>`).join('')}</div>
+  if(it.kind==='choice') body = optsHtml(it);
+  else if(it.kind==='tiles') body = `<div class="answer-row" id="arow"></div><div class="tiles" id="tiles">${it.tokens.map((t,i)=>`<button class="tile ${it.zhTiles?'zh':''}" data-i="${i}">${esc(t)}</button>`).join('')}</div>
             <div class="acts"><button class="btn ghost sm" id="undo">← 退一个</button><button class="btn" id="check" disabled>好了 ✓</button></div>`;
-  } else {
-    body = `<div class="numin" id="numin">&nbsp;</div><div class="numpad">${[1,2,3,4,5,6,7,8,9,'⌫',0,'✓'].map(n=>`<button data-n="${n}">${n}</button>`).join('')}</div>`;
-  }
+  else body = numpadHtml();
   c.innerHTML = `
     <div class="tag"><span class="pill ${k.s}">${SUBJ[k.s].name}</span>${esc(k.name)} · <button id="relesson" style="text-decoration:underline">再讲一遍</button></div>
-    ${it.html||''}
+    ${it.html?`<div class="qfig">${it.html}</div>`:''}
     <div class="prompt">${it.prompt}</div>
     ${it.speak?`<button class="spk" id="spk">🔊 再听一遍</button>`:''}
     ${body}
     <div id="fb"></div>`;
-  $('#relesson').onclick=()=>openSheet(`<h2>${esc(k.name)}</h2><p style="font-size:17px;line-height:1.7;color:var(--ink2)">${esc(k.lesson)}</p><div class="acts" style="margin-top:14px"><button class="btn sm" onclick="closeSheet()">知道了</button></div>`);
+  $('#relesson').onclick=()=>lessonSheet(k);
   if(it.speak){ $('#spk').onclick=()=>say(it.speak.t,it.speak.l); if(it.auto||k.word) setTimeout(()=>say(it.speak.t,it.speak.l),250); }
   if(it.kind==='choice'){
     c.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(+b.dataset.i));
@@ -1047,19 +1320,11 @@ function renderQ(k){
     $('#undo').onclick=()=>{ if(Q.answered) return; Q.picked.pop(); redraw(); };
     $('#check').onclick=()=>answer(Q.picked.map(i=>it.tokens[i]).join(it.join));
   } else {
-    let v='';
-    c.querySelectorAll('.numpad button').forEach(b=>b.onclick=()=>{
-      if(Q.answered) return; const n=b.dataset.n;
-      if(n==='⌫') v=v.slice(0,-1); else if(n==='✓'){ if(v!=='') answer(+v); return; } else if(v.length<5) v+=n;
-      $('#numin').innerHTML = v||'&nbsp;';
-    });
+    bindNumpad(c, v=>answer(v));
   }
 }
-function answer(val){
-  if(Q.answered) return; Q.answered=true;
-  const k=Q.list[Q.i], it=Q.item;
-  const ok = it.kind==='choice' ? val===it.ans : it.kind==='tiles' ? String(val).toLowerCase()===String(it.ans).toLowerCase() : val===it.ans;
-  // 存档
+/* 记录成绩并返回升级信息 */
+function commit(k, ok){
   const r = rec(k.id), today=dayN(), before=r.box;
   r.seen++; if(ok){ r.ok++; r.box=Math.min(4,r.box+1); } else { r.ng++; r.box=Math.max(1,r.box-1); }
   r.due = today + (ok ? IV[r.box] : 1);
@@ -1067,9 +1332,26 @@ function answer(val){
   const d = S.days[today] || {n:0,ok:0}; d.n++; if(ok) d.ok++; S.days[today]=d;
   save();
   if(ok) Q.right++;
-  if(r.box>before && r.box>=2) Q.ups.push({k,box:r.box});
+  const up = r.box>before && r.box>=2;
+  if(up) Q.ups.push({k,box:r.box});
   if(r.box<before) Q.downs.push({k,box:r.box});
-  // 界面反馈
+  ok ? sndOK() : sndBad();
+  if(up) setTimeout(sndUp,300);
+  return up ? `<div class="chip up">⭐ ${esc(k.name)} 升到「${BOXNAME[r.box]}」</div>` : '';
+}
+function feedback(ok, correctText, exp, levelMsg){
+  $('#fb').innerHTML = `<div class="fb ${ok?'ok':'bad'}">
+      <div class="head">${ok?PRAISE[rnd(PRAISE.length)]:OOPS[rnd(OOPS.length)]}</div>
+      ${correctText||''}<div class="exp">${exp||''}</div>${levelMsg||''}
+      <div class="acts"><button class="btn big" id="next">${Q.i+1>=Q.list.length?'看看成绩 ▸':'下一题 ▸'}</button></div></div>`;
+  $('#next').onclick=()=>{ Q.i++; nextQ(); };
+  $('#next').focus();
+}
+function answer(val){
+  if(Q.answered) return; Q.answered=true;
+  const k=Q.list[Q.i], it=Q.item;
+  const ok = it.kind==='choice' ? val===it.ans : it.kind==='tiles' ? String(val).toLowerCase()===String(it.ans).toLowerCase() : val===it.ans;
+  const levelMsg = commit(k, ok);
   if(it.kind==='choice'){
     document.querySelectorAll('.opt').forEach(b=>{ b.disabled=true; const i=+b.dataset.i; if(i===it.ans) b.classList.add('right'); else if(i===val) b.classList.add('wrong'); });
     if(it.fill) $('.blank').textContent = it.fill;
@@ -1078,17 +1360,54 @@ function answer(val){
   } else {
     $('#numin').classList.add(ok?'right':'wrong');
   }
-  ok ? sndOK() : sndBad();
-  if(ok && r.box>before && r.box>=2) setTimeout(sndUp,300);
   if(it.speakAfter) setTimeout(()=>say(it.speakAfter.t,it.speakAfter.l),400);
-  const levelMsg = (ok && r.box>before && r.box>=2) ? `<div class="chip up">⭐ ${esc(k.name)} 升到「${BOXNAME[r.box]}」</div>` : '';
-  const correctText = !ok ? `<div>正确答案：<b>${it.kind==='choice'?(it.en?esc(it.opts[it.ans]):it.opts[it.ans]):esc(it.ans)}</b></div>` : '';
-  $('#fb').innerHTML = `<div class="fb ${ok?'ok':'bad'}">
-      <div class="head">${ok?PRAISE[rnd(PRAISE.length)]:OOPS[rnd(OOPS.length)]}</div>
-      ${correctText}<div class="exp">${it.exp||''}</div>${levelMsg}
-      <div class="acts"><button class="btn big" id="next">${Q.i+1>=Q.list.length?'看看成绩 ▸':'下一题 ▸'}</button></div></div>`;
-  $('#next').onclick=()=>{ Q.i++; nextQ(); };
-  $('#next').focus();
+  const correctText = !ok ? `<div>正确答案：<b>${it.kind==='choice'?(it.en?esc(it.opts[it.ans]):(it.optHtml?'看上面绿色的那个':it.opts[it.ans])):esc(it.ans)}</b></div>` : '';
+  feedback(ok, correctText, it.exp, levelMsg);
+}
+/* ---------- 分步题：像在本子上一步步写 ---------- */
+function renderSteps(k){
+  const it=Q.item, c=$('#qcard');
+  Q.step=0; Q.stepWrong=0; Q.board=(it.board||[]).slice();
+  c.innerHTML = `
+    <div class="tag"><span class="pill ${k.s}">${SUBJ[k.s].name}</span>${esc(k.name)} · <button id="relesson" style="text-decoration:underline">再讲一遍</button></div>
+    ${it.html?`<div class="qfig">${it.html}</div>`:''}
+    <div class="prompt">${it.prompt}</div>
+    <div class="board" id="board"></div>
+    <div class="stepdots" id="dots"></div>
+    <div id="stepq"></div>
+    <div id="fb"></div>`;
+  $('#relesson').onclick=()=>lessonSheet(k);
+  drawBoard(); renderStep();
+}
+function drawBoard(){
+  const b=$('#board'); if(!Q.board.length){ b.hidden=true; return; }
+  b.hidden=false; b.innerHTML = work(Q.board);
+}
+function renderStep(){
+  const it=Q.item, st=it.steps[Q.step];
+  $('#dots').innerHTML = it.steps.map((s,i)=>`<i class="${i<Q.step?'done':i===Q.step?'now':''}"></i>`).join('') + `<span>第 ${Q.step+1} 步 / 共 ${it.steps.length} 步</span>`;
+  const q=$('#stepq'); Q.answered=false;
+  q.innerHTML = `<div class="stepq">${st.q}</div>` + (st.kind==='choice' ? optsHtml(st,'sopts') : numpadHtml());
+  if(st.kind==='choice') q.querySelectorAll('.opt').forEach(b=>b.onclick=()=>stepAnswer(+b.dataset.i));
+  else bindNumpad(q, v=>stepAnswer(v));
+}
+function stepAnswer(val){
+  if(Q.answered) return; Q.answered=true;
+  const it=Q.item, st=it.steps[Q.step], ok = val===st.ans;
+  if(!ok) Q.stepWrong++;
+  const q=$('#stepq');
+  if(st.kind==='choice') q.querySelectorAll('.opt').forEach(b=>{ b.disabled=true; const i=+b.dataset.i; if(i===st.ans) b.classList.add('right'); else if(i===val) b.classList.add('wrong'); });
+  else q.querySelector('#numin').classList.add(ok?'right':'wrong');
+  ok ? tone([[660,.1,0]]) : sndBad();
+  if(st.after) { Q.board.push(st.after); drawBoard(); }
+  if(st.mark && Q.board.length){ Q.board[0] = Q.board[0].replace(st.mark, `<mark>${st.mark}</mark>`); drawBoard(); }
+  const last = Q.step+1>=it.steps.length;
+  q.insertAdjacentHTML('beforeend', `<div class="stephint ${ok?'ok':'bad'}">${ok?'✓ 对。':'✗ 不对。'} ${st.hint||''}${!ok&&st.kind==='num'?` 正确答案是 <b>${st.ans}</b>。`:''}${last?'':'<div class="acts"><button class="btn sm" id="stepnext">下一步 ▸</button></div>'}</div>`);
+  if(!last){ $('#stepnext').onclick=()=>{ Q.step++; renderStep(); }; $('#stepnext').focus(); return; }
+  // 全部步骤走完：一步都没错才算对
+  const k=Q.list[Q.i]; const allOk = Q.stepWrong===0;
+  const levelMsg = commit(k, allOk);
+  feedback(allOk, allOk?'':`<div>有 ${Q.stepWrong} 步没对，明天再来一遍。</div>`, it.exp, levelMsg);
 }
 function finish(){
   const today=dayN();
