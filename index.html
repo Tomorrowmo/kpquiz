@@ -281,6 +281,11 @@ textarea{width:100%;min-height:90px;font:12px/1.4 ui-monospace,monospace;border:
 .bar .q{animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .bar .flash{font-weight:700;fill:var(--ok)}
+.spk.mini{min-height:36px;font-size:14px;padding:0 12px}
+.spk.tiny-say{min-height:26px;font-size:12px;padding:0 8px;border-width:1.5px;border-radius:13px;vertical-align:middle;display:inline-flex}
+.tag .spk.tiny-say{border-color:var(--ink3);color:var(--ink2)}
+.switch{display:flex;align-items:center;gap:10px;font-size:15px}
+.switch input{width:22px;height:22px;accent-color:var(--yy)}
 </style>
 </head>
 <body>
@@ -1307,6 +1312,27 @@ const sndUp  = () => tone([[523,.1,0],[659,.1,.1],[784,.1,.2],[1047,.25,.3]]);
 let VOICES=[];
 function loadVoices(){ try{ VOICES = speechSynthesis.getVoices(); }catch(e){} }
 if('speechSynthesis' in window){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+/* 把一段（可能带 HTML 的）讲解变成能读的话：去标签、符号读成字、中英文分开用各自的语音 */
+function toSpeech(html){
+  let t=String(html||'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+  t=t.replace(/[「」『』【】]/g,'').replace(/×/g,' 乘 ').replace(/÷/g,' 除以 ').replace(/−/g,' 减 ').replace(/(\d)\s*\+\s*(\d)/g,'$1 加 $2').replace(/=\s*\?/g,' 等于多少').replace(/=/g,' 等于 ').replace(/□/g,' 方框 ').replace(/\?/g,'？').replace(/[·•★☆✓✗▸→]/g,' ').replace(/\s+/g,' ').trim();
+  return t;
+}
+function sayMixed(html, rate){
+  if(!('speechSynthesis' in window)) return;
+  const t=toSpeech(html); if(!t) return;
+  try{ speechSynthesis.cancel(); }catch(e){}
+  // 按语言切段：连续的英文（含空格、撇号、标点）为一段，其余为中文
+  const segs=[]; const re=/[A-Za-z][A-Za-z'’ ,.!?\-]*[A-Za-z.!?']|[A-Za-z]/g; let last=0, m;
+  while((m=re.exec(t))){ if(m.index>last) segs.push(['zh',t.slice(last,m.index)]); segs.push(['en',m[0]]); last=m.index+m[0].length; }
+  if(last<t.length) segs.push(['zh',t.slice(last)]);
+  segs.forEach(([l,txt])=>{ if(!txt.trim()) return; const u=new SpeechSynthesisUtterance(txt); u.lang=l==='en'?'en-US':'zh-CN'; u.rate=rate||(l==='en'?0.85:0.95);
+    const pref=VOICES.filter(v=>v.lang&&v.lang.replace('_','-').toLowerCase().startsWith(l==='en'?'en':'zh'));
+    const best=pref.find(v=>/Samantha|Google|Ting-Ting|Tingting|Xiaoxiao|Huihui|Lili/i.test(v.name))||pref[0]; if(best) u.voice=best;
+    speechSynthesis.speak(u); });
+}
+const spkBtn=(html,label,cls)=>`<button class="spk ${cls||'mini'}" data-say="${esc(toSpeech(html))}">🔊 ${label||'听讲解'}</button>`;
+function bindSay(root){ (root||document).querySelectorAll('[data-say]').forEach(b=>{ if(b._say) return; b._say=1; b.onclick=()=>sayMixed(b.dataset.say); }); }
 function say(text, lang, rate){
   if(!('speechSynthesis' in window)) return;
   try{
@@ -1457,9 +1483,11 @@ function startSession(subj){
   const list = buildSession(subj);
   if(!list.length){ toast('这一科的题都练过了，去别的科看看'); return; }
   Q = {list, i:0, right:0, ups:[], downs:[], subj, answered:false};
+  try{ speechSynthesis.speak(new SpeechSynthesisUtterance('')); }catch(e){}   // iOS：在手势里先说一句空话，之后才允许自动朗读
   show('quiz'); nextQ();
 }
 function nextQ(){
+  try{ speechSynthesis.cancel(); }catch(e){}
   if(Q.i>=Q.list.length) return finish();
   const k = Q.list[Q.i]; const r = rec(k.id);
   $('#prog').style.width = (Q.i/Q.list.length*100)+'%';
@@ -1474,13 +1502,15 @@ function renderLesson(k, go){
     <h2 style="font-size:26px">${esc(k.name)}</h2>
     <p style="font-size:18px;line-height:1.7;color:var(--ink2)">${esc(k.lesson)}</p>
     ${k.lessonHtml?`<div class="lfig">${k.lessonHtml}</div>`:''}
-    ${k.word?`<button class="spk" id="spk">🔊 听一听 <span class="en">${esc(k.word.en)}</span></button>`:''}
+    <div class="row-btns">${spkBtn(k.lesson,'听讲解','')}${k.word?`<button class="spk" id="spk">🔊 听一听 <span class="en">${esc(k.word.en)}</span></button>`:''}</div>
     <div class="acts"><button class="btn big" id="go">明白了，出题 ▸</button></div>`;
-  const sp=$('#spk'); if(sp){ sp.onclick=()=>say(k.word.en,'en'); setTimeout(()=>say(k.word.en,'en'),300); }
+  const sp=$('#spk'); if(sp){ sp.onclick=()=>say(k.word.en,'en'); }
+  bindSay(c);
+  if(S.autoRead!==false) setTimeout(()=>{ if(k.word) sayMixed(k.lesson+' '+k.word.en); else sayMixed(k.lesson); },350);
   $('#go').onclick=go; mount3d(c);
 }
 function lessonSheet(k){
-  openSheet(`<h2>${esc(k.name)}</h2><p style="font-size:17px;line-height:1.7;color:var(--ink2)">${esc(k.lesson)}</p>${k.lessonHtml?`<div class="lfig">${k.lessonHtml}</div>`:''}<div class="acts" style="margin-top:14px"><button class="btn sm" onclick="closeSheet()">知道了</button></div>`); mount3d($('#sheet'));
+  openSheet(`<h2>${esc(k.name)}</h2><p style="font-size:17px;line-height:1.7;color:var(--ink2)">${esc(k.lesson)}</p>${k.lessonHtml?`<div class="lfig">${k.lessonHtml}</div>`:''}<div class="acts" style="margin-top:14px">${spkBtn(k.lesson,'听讲解','')}<button class="btn sm" onclick="closeSheet()">知道了</button></div>`); mount3d($('#sheet')); bindSay($('#sheet'));
 }
 function optsHtml(it, cls){
   return `<div class="opts ${it.two||it.opts.length===2?'two':''} ${it.optHtml?'has-html':''}" id="${cls||'opts'}">${it.opts.map((o,i)=>`<button class="opt ${it.en?'en':''} ${it.optHtml?'html':''}" data-i="${i}"><span class="k">${'ABCD'[i]}</span><span>${it.en?esc(o):o}</span></button>`).join('')}</div>`;
@@ -1502,14 +1532,15 @@ function renderQ(k){
   else if(it.kind==='tiles') body = `<div class="answer-row" id="arow"></div><div class="tiles" id="tiles">${it.tokens.map((t,i)=>`<button class="tile ${it.zhTiles?'zh':''}" data-i="${i}">${esc(t)}</button>`).join('')}</div>
             <div class="acts"><button class="btn ghost sm" id="undo">← 退一个</button><button class="btn" id="check" disabled>好了 ✓</button></div>`;
   else body = numpadHtml();
+  const readable = it.prompt + (it.kind==='choice'&&!it.optHtml ? '。' + it.opts.map((o,i)=>'ABCD'[i]+'，'+o).join('。') : '');
   c.innerHTML = `
-    <div class="tag"><span class="pill ${k.s}">${SUBJ[k.s].name}</span>${esc(k.name)} · <button id="relesson" style="text-decoration:underline">再讲一遍</button></div>
+    <div class="tag"><span class="pill ${k.s}">${SUBJ[k.s].name}</span>${esc(k.name)} · <button id="relesson" style="text-decoration:underline">再讲一遍</button> · ${spkBtn(readable,'读题','tiny-say')}</div>
     ${it.html?`<div class="qfig">${it.html}</div>`:''}
     <div class="prompt">${it.prompt}</div>
     ${it.speak?`<button class="spk" id="spk">🔊 再听一遍</button>`:''}
     ${body}
     <div id="fb"></div>`;
-  $('#relesson').onclick=()=>lessonSheet(k); mount3d(c);
+  $('#relesson').onclick=()=>lessonSheet(k); mount3d(c); bindSay(c);
   if(it.speak){ $('#spk').onclick=()=>say(it.speak.t,it.speak.l); if(it.auto||k.word) setTimeout(()=>say(it.speak.t,it.speak.l),250); }
   if(it.kind==='choice'){
     c.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(+b.dataset.i));
@@ -1540,12 +1571,13 @@ function commit(k, ok){
   return up ? `<div class="chip up">⭐ ${esc(k.name)} 升到「${BOXNAME[r.box]}」</div>` : '';
 }
 function feedback(ok, correctText, exp, levelMsg){
-  const rv=Q.item.reveal;
+  const rv=Q.item.reveal; const expTxt=(correctText||'')+' '+(exp||'');
   $('#fb').innerHTML = `<div class="fb ${ok?'ok':'bad'}">
       <div class="head">${ok?PRAISE[rnd(PRAISE.length)]:OOPS[rnd(OOPS.length)]}</div>
-      ${correctText||''}<div class="exp">${exp||''}</div>${levelMsg||''}
+      ${correctText||''}<div class="exp">${exp||''} ${spkBtn(expTxt,'听讲解','tiny-say')}</div>${levelMsg||''}
       <div class="acts">${rv?`<button class="btn ghost" id="reveal">🔄 ${esc(rv.label)}</button>`:''}<button class="btn big" id="next" style="${rv?'width:auto;flex:1':''}">${Q.i+1>=Q.list.length?'看看成绩 ▸':'下一题 ▸'}</button></div></div>`;
   if(rv) $('#reveal').onclick=()=>{ sceneGo(rv.id, rv.view); $('#reveal').blur(); };
+  bindSay($('#fb')); if(!ok && S.autoRead!==false && !Q.item.speakAfter) setTimeout(()=>sayMixed(expTxt),500);
   $('#next').onclick=()=>{ Q.i++; nextQ(); };
   $('#next').focus();
 }
@@ -1571,14 +1603,14 @@ function renderSteps(k){
   const it=Q.item, c=$('#qcard');
   Q.step=0; Q.stepWrong=0; Q.board=(it.board||[]).slice();
   c.innerHTML = `
-    <div class="tag"><span class="pill ${k.s}">${SUBJ[k.s].name}</span>${esc(k.name)} · <button id="relesson" style="text-decoration:underline">再讲一遍</button></div>
+    <div class="tag"><span class="pill ${k.s}">${SUBJ[k.s].name}</span>${esc(k.name)} · <button id="relesson" style="text-decoration:underline">再讲一遍</button> · ${spkBtn(it.prompt,'读题','tiny-say')}</div>
     ${it.html?`<div class="qfig">${it.html}</div>`:''}
     <div class="prompt">${it.prompt}</div>
     <div class="board" id="board"></div>
     <div class="stepdots" id="dots"></div>
     <div id="stepq"></div>
     <div id="fb"></div>`;
-  $('#relesson').onclick=()=>lessonSheet(k); mount3d(c);
+  $('#relesson').onclick=()=>lessonSheet(k); mount3d(c); bindSay(c);
   drawBoard(); renderStep();
 }
 function drawBoard(){
@@ -1589,7 +1621,8 @@ function renderStep(){
   const it=Q.item, st=it.steps[Q.step];
   $('#dots').innerHTML = it.steps.map((s,i)=>`<i class="${i<Q.step?'done':i===Q.step?'now':''}"></i>`).join('') + `<span>第 ${Q.step+1} 步 / 共 ${it.steps.length} 步</span>`;
   const q=$('#stepq'); Q.answered=false;
-  q.innerHTML = `<div class="stepq">${st.q}</div>` + (st.kind==='choice' ? optsHtml(st,'sopts') : numpadHtml());
+  q.innerHTML = `<div class="stepq">${st.q} ${spkBtn(st.q + (st.kind==='choice'?'。'+st.opts.map((o,i)=>'ABCD'[i]+'，'+o).join('。'):''),'读题','tiny-say')}</div>` + (st.kind==='choice' ? optsHtml(st,'sopts') : numpadHtml());
+  bindSay(q);
   if(st.kind==='choice') q.querySelectorAll('.opt').forEach(b=>b.onclick=()=>stepAnswer(+b.dataset.i));
   else bindNumpad(q, v=>stepAnswer(v));
 }
@@ -1605,7 +1638,9 @@ function stepAnswer(val){
   if(st.set){ const el=$('#qcard').querySelector(`[data-slot="${st.set[0]}"]`); if(el){ el.textContent=st.set[1]; el.classList.remove('q'); el.classList.add('flash'); } }
   if(st.mark && Q.board.length){ Q.board[0] = Q.board[0].replace(st.mark, `<mark>${st.mark}</mark>`); drawBoard(); }
   const last = Q.step+1>=it.steps.length;
-  q.insertAdjacentHTML('beforeend', `<div class="stephint ${ok?'ok':'bad'}">${ok?'✓ 对。':'✗ 不对。'} ${st.hint||''}${!ok&&st.kind==='num'?` 正确答案是 <b>${st.ans}</b>。`:''}${last?'':'<div class="acts"><button class="btn sm" id="stepnext">下一步 ▸</button></div>'}</div>`);
+  const hintTxt=(ok?'对。':'不对。')+(st.hint||'')+(!ok&&st.kind==='num'?` 正确答案是 ${st.ans}。`:'');
+  q.insertAdjacentHTML('beforeend', `<div class="stephint ${ok?'ok':'bad'}">${ok?'✓ 对。':'✗ 不对。'} ${st.hint||''}${!ok&&st.kind==='num'?` 正确答案是 <b>${st.ans}</b>。`:''} ${spkBtn(hintTxt,'听','tiny-say')}${last?'':'<div class="acts"><button class="btn sm" id="stepnext">下一步 ▸</button></div>'}</div>`);
+  bindSay(q); if(!ok && S.autoRead!==false) setTimeout(()=>sayMixed(hintTxt),200);
   if(!last){ $('#stepnext').onclick=()=>{ Q.step++; renderStep(); }; $('#stepnext').focus(); return; }
   // 全部步骤走完：一步都没错才算对
   const k=Q.list[Q.i]; const allOk = Q.stepWrong===0;
@@ -1685,8 +1720,9 @@ function renderMap(){
     const dueTxt = r.box===0?'还没见过':r.due<=today?'今天该复习':`${r.due-today} 天后再见`;
     openSheet(`<div class="tag"><span class="pill ${k.s}">${SUBJ[k.s].name}</span>第 ${k.u} 单元 · ${BOXNAME[r.box]}</div><h2>${esc(k.name)}</h2>
       <div class="row"><span>答对 <b>${r.ok}</b></span><span>答错 <b>${r.ng}</b></span><span>${dueTxt}</span></div>
-      <p style="font-size:16px;line-height:1.7;color:var(--ink2)">${esc(k.lesson)}</p>
-      <div class="acts" style="margin-top:14px">${k.word?`<button class="btn ghost sm" onclick="say('${esc(k.word.en)}','en')">🔊 听</button>`:''}<button class="btn sm" onclick="closeSheet()">知道了</button></div>`);
+      <p style="font-size:16px;line-height:1.7;color:var(--ink2)">${esc(k.lesson)}</p>${k.lessonHtml?`<div class="lfig">${k.lessonHtml}</div>`:''}
+      <div class="acts" style="margin-top:14px">${spkBtn(k.lesson,'听讲解','')}${k.word?`<button class="btn ghost sm" onclick="say('${esc(k.word.en)}','en')">🔊 听单词</button>`:''}<button class="btn sm" onclick="closeSheet()">知道了</button></div>`);
+    mount3d($('#sheet')); bindSay($('#sheet'));
   });
 }
 
@@ -1757,12 +1793,17 @@ function renderParent(){
     <div class="sec"><h3>听写写错的词</h3>${dw?`<table><tbody>${dw}</tbody></table>`:'<p class="muted">还没有听写记录，或者全对。</p>'}</div>
     <div class="sec"><h3>各科进度</h3><table><thead><tr><th>科目</th><th class="n">没见过</th><th class="n">刚学</th><th class="n">铜</th><th class="n">银</th><th class="n">金</th><th class="n">待复习</th></tr></thead><tbody>
       ${Object.keys(SUBJ).map(s=>{const cc=counts(s);return `<tr><td>${SUBJ[s].name}</td>${cc.boxes.map(n=>`<td class="n">${n}</td>`).join('')}<td class="n">${cc.due}</td></tr>`;}).join('')}</tbody></table></div>
+    <div class="sec"><h3>语音</h3>
+      <label class="switch"><input type="checkbox" id="autoread" ${S.autoRead!==false?'checked':''}> 新知识点和答错时自动朗读讲解</label>
+      <p class="muted" style="margin-top:6px">每道题、每张讲解卡上都有 🔊，随时可以点。用的是设备自带的中文和英文语音，不用联网。</p>
+    </div>
     <div class="sec"><h3>备份与恢复</h3>
       <p class="muted" style="margin-bottom:8px">进度存在这台设备的浏览器里。换设备时，把下面这段复制过去，粘贴后点「恢复」。</p>
       <textarea id="dump" readonly>${esc(JSON.stringify(S))}</textarea>
       <div class="row-btns" style="margin-top:8px"><button class="tiny" id="copy">复制备份</button><button class="tiny" id="restore">从粘贴板恢复</button><button class="tiny danger" id="reset">清空全部进度</button></div>
       <p class="muted" style="margin-top:10px">题库：第 1、2 单元，语文 ${counts('yw').total} · 数学 ${counts('sx').total} · 英语 ${counts('yy').total} 个知识点。复习间隔 1 / 3 / 7 / 14 天，答错降一级、次日再出。</p>
     </div>`;
+  $('#autoread').onchange=e=>{ S.autoRead=e.target.checked; save(); toast(S.autoRead?'会自动朗读':'只在点 🔊 时朗读'); };
   $('#copy').onclick=async()=>{ try{ await navigator.clipboard.writeText(JSON.stringify(S)); toast('已复制'); }catch(e){ $('#dump').select(); toast('长按文本框全选复制'); } };
   $('#restore').onclick=async()=>{ let t=''; try{ t=await navigator.clipboard.readText(); }catch(e){ t=prompt('把备份内容粘贴到这里')||''; } try{ const o=JSON.parse(t); if(o&&o.kp){ S=o; save(); toast('已恢复'); renderParent(); } else toast('内容不对'); }catch(e){ toast('内容不对'); } };
   $('#reset').onclick=()=>{ if(confirm('确定清空全部进度？这个操作不能撤销。')){ localStorage.removeItem('kq1'); load(); toast('已清空'); renderParent(); } };
