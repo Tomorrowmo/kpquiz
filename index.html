@@ -47,6 +47,11 @@
   --shadow:0 1px 0 rgba(0,0,0,.4),0 10px 26px -16px rgba(0,0,0,.9);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* 整体放大：iPad 竖屏 1.25 倍，横屏 / 大屏 1.4 倍；家长页还能再调一档 */
+:root{--z:1}
+@media (min-width:740px){:root{--z:1.25}}
+@media (min-width:1000px){:root{--z:1.4}}
+.app,.nav .in,.sheet .in,.toast{zoom:var(--z)}
 html{height:100%}
 body{
   margin:0;min-height:100%;background:var(--paper);
@@ -286,6 +291,7 @@ textarea{width:100%;min-height:90px;font:12px/1.4 ui-monospace,monospace;border:
 .tag .spk.tiny-say{border-color:var(--ink3);color:var(--ink2)}
 .switch{display:flex;align-items:center;gap:10px;font-size:15px}
 .switch input{width:22px;height:22px;accent-color:var(--yy)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden} .seg button{min-height:38px;padding:0 14px;font-size:14px;background:var(--card)} .seg button.on{background:var(--ink);color:var(--paper)}
 /* ---------- 讲解连环画 ---------- */
 .pv{text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;padding:6px 0;min-height:200px;justify-content:center;touch-action:pan-y}
 .pv-emoji{font-size:62px;line-height:1.15;letter-spacing:.04em}
@@ -313,6 +319,14 @@ details.more p{margin:8px 0;font-size:15px;color:var(--ink2);line-height:1.7}
 </head>
 <body>
 <div class="app">
+<div id="errbar" hidden style="background:#B93227;color:#fff;font:13px/1.5 ui-monospace,Menlo,monospace;padding:8px 12px;white-space:pre-wrap;word-break:break-all;user-select:text;-webkit-user-select:text"></div>
+<script>
+window.onerror=function(m,src,line,col,err){ try{ var b=document.getElementById('errbar'); b.hidden=false; b.textContent+='⚠ 脚本出错：'+m+' @'+line+':'+col+(err&&err.stack?'
+'+String(err.stack).slice(0,300):'')+'
+'; }catch(e){} };
+window.addEventListener('unhandledrejection',function(e){ try{ var b=document.getElementById('errbar'); b.hidden=false; b.textContent+='⚠ '+(e.reason&&e.reason.message||e.reason)+'
+'; }catch(x){} });
+</script>
 
 <!-- 首页 -->
 <section class="screen" id="s-home">
@@ -2160,6 +2174,10 @@ function renderParent(){
     <div class="sec"><h3>听写写错的词</h3>${dw?`<table><tbody>${dw}</tbody></table>`:'<p class="muted">还没有听写记录，或者全对。</p>'}</div>
     <div class="sec"><h3>各科进度</h3><table><thead><tr><th>科目</th><th class="n">没见过</th><th class="n">刚学</th><th class="n">铜</th><th class="n">银</th><th class="n">金</th><th class="n">待复习</th></tr></thead><tbody>
       ${Object.keys(SUBJ).map(s=>{const cc=counts(s);return `<tr><td>${SUBJ[s].name}</td>${cc.boxes.map(n=>`<td class="n">${n}</td>`).join('')}<td class="n">${cc.due}</td></tr>`;}).join('')}</tbody></table></div>
+    <div class="sec"><h3>大小</h3>
+      <div class="row-btns" style="align-items:center;gap:12px"><span class="muted">字和按钮</span><div class="seg" id="zoomseg">${[[0.9,'小一点'],[1,'标准'],[1.15,'大'],[1.3,'特大']].map(([v,l])=>`<button data-z="${v}" class="${(S.zoomLevel||1)===v?'on':''}">${l}</button>`).join('')}</div></div>
+      <p class="muted" style="margin-top:6px">iPad 上会自动放大，这里是在自动的基础上再调。</p>
+    </div>
     <div class="sec"><h3>语音</h3>
       <label class="switch"><input type="checkbox" id="autoread" ${S.autoRead!==false?'checked':''}> 新知识点和答错时自动朗读讲解</label>
       <p class="muted" style="margin-top:6px">每道题、每张讲解卡上都有 🔊，随时可以点。用的是设备自带的中文和英文语音，不用联网。</p>
@@ -2170,6 +2188,7 @@ function renderParent(){
       <div class="row-btns" style="margin-top:8px"><button class="tiny" id="copy">复制备份</button><button class="tiny" id="restore">从粘贴板恢复</button><button class="tiny danger" id="reset">清空全部进度</button></div>
       <p class="muted" style="margin-top:10px">题库：第 1、2 单元，语文 ${counts('yw').total} · 数学 ${counts('sx').total} · 英语 ${counts('yy').total} 个知识点。复习间隔 1 / 3 / 7 / 14 天，答错降一级、次日再出。</p>
     </div>`;
+  $('#zoomseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{ S.zoomLevel=+b.dataset.z; save(); applyZoom(); renderParent(); });
   $('#autoread').onchange=e=>{ S.autoRead=e.target.checked; save(); toast(S.autoRead?'会自动朗读':'只在点 🔊 时朗读'); };
   $('#copy').onclick=async()=>{ try{ await navigator.clipboard.writeText(JSON.stringify(S)); toast('已复制'); }catch(e){ $('#dump').select(); toast('长按文本框全选复制'); } };
   $('#restore').onclick=async()=>{ let t=''; try{ t=await navigator.clipboard.readText(); }catch(e){ t=prompt('把备份内容粘贴到这里')||''; } try{ const o=JSON.parse(t); if(o&&o.kp){ S=o; save(); toast('已恢复'); renderParent(); } else toast('内容不对'); }catch(e){ toast('内容不对'); } };
@@ -2177,7 +2196,8 @@ function renderParent(){
 }
 
 /* ---------- 启动 ---------- */
-load();
+function applyZoom(){ const auto = innerWidth>=1000?1.4 : innerWidth>=740?1.25 : 1; document.documentElement.style.setProperty('--z', (auto*(S.zoomLevel||1)).toFixed(2)); }
+load(); applyZoom(); addEventListener('resize', applyZoom);
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>show(b.dataset.go));
 $('#btn-start').onclick=()=>startSession(null);
 $('#btn-quit').onclick=()=>{ if(Q && Q.i>0 && !confirm('这一关还没打完，先退出吗？已经答过的题都记下了。')) return; show('home'); };
