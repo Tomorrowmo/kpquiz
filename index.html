@@ -315,6 +315,56 @@ details.more{border-top:1px dashed var(--line);padding-top:8px}
 details.more summary{cursor:pointer;color:var(--ink3);font-size:14px;list-style:none}
 details.more summary::before{content:'▸ '} details.more[open] summary::before{content:'▾ '}
 details.more p{margin:8px 0;font-size:15px;color:var(--ink2);line-height:1.7}
+/* ---------- app 化：地图、小猫头鹰、星星、撒花 ---------- */
+.hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+.hd .eyebrow{font-size:12px;letter-spacing:.2em;color:var(--ink3);margin-bottom:4px}
+.mascot{display:flex;align-items:flex-start;gap:10px;margin:6px 0 12px}
+.mascot .face{font-size:44px;line-height:1;flex:none;animation:bob 3s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.bubble{position:relative;background:var(--card);border:2px solid var(--ink);border-radius:14px;padding:10px 14px;font-size:16px;line-height:1.5;flex:1;max-width:36ch}
+.bubble::before{content:'';position:absolute;left:-10px;top:16px;border:6px solid transparent;border-right-color:var(--ink);border-left:0}
+.today{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:14px;color:var(--ink2);margin-bottom:6px;align-items:center}
+.today b{font-family:var(--en);color:var(--ink)}
+.today .stars{color:var(--b4);letter-spacing:.05em;font-size:16px}
+.path-wrap{background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);padding:6px 4px 2px;margin-bottom:12px;overflow:hidden}
+#path{display:block}
+#path .rail{fill:none;stroke:var(--line);stroke-width:10;stroke-linecap:round;stroke-linejoin:round}
+#path .rail.done{stroke:var(--b4)}
+#path .node{cursor:pointer}
+#path .node circle{fill:var(--sunk);stroke:var(--line);stroke-width:3}
+#path .node.done circle{fill:var(--b4);stroke:#C99400}
+#path .node.cur circle{fill:var(--ink);stroke:var(--ink);animation:pulse2 1.6s ease-in-out infinite}
+#path .node.boss circle{stroke-dasharray:4 3}
+@keyframes pulse2{0%,100%{r:22}50%{r:25}}
+#path .node text{font-family:var(--en);font-weight:800;font-size:16px;text-anchor:middle;fill:var(--ink2);pointer-events:none}
+#path .node.cur text{fill:var(--paper)} #path .node.cur text.go{fill:var(--ink)}
+#path .node.done text{fill:#3B2E00}
+#path .node .em{font-size:20px}
+#path .node .st{font-size:11px;fill:var(--b4)}
+#path .node.done .st{fill:#7A5A00}
+#path .go{font-family:var(--disp);font-size:14px;fill:var(--ink);text-anchor:middle;pointer-events:none}
+.subj-pick{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--ink3);margin-bottom:10px}
+.subj-pick button{min-height:34px;padding:0 12px;border:1px solid var(--line);border-radius:17px;background:var(--card);font-size:14px}
+.subj-pick button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.subj-pick button.yw.on{background:var(--yw);border-color:var(--yw)} .subj-pick button.sx.on{background:var(--sx);border-color:var(--sx)} .subj-pick button.yy.on{background:var(--yy);border-color:var(--yy)}
+.hintrow{display:flex;align-items:center;gap:12px;min-height:34px}
+.hintbtn{min-height:34px;padding:0 12px;border:1.5px dashed var(--ink3);border-radius:17px;font-size:14px;color:var(--ink2)}
+.hintbtn[disabled]{opacity:.35}
+.opt.gone{opacity:.25;text-decoration:line-through;pointer-events:none}
+.opt.tried{border-color:var(--bad);background:var(--bad-bg);pointer-events:none}
+.retry{color:var(--bad);font-weight:700;font-size:15px}
+.done-stars{font-size:52px;letter-spacing:.06em;line-height:1.1}
+.done-stars .off{opacity:.2}
+.lvl-title{font-family:var(--disp);font-size:30px}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
+.qbar .lvl{font-family:var(--disp);font-size:15px;color:var(--ink2);white-space:nowrap}
+.hd-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.points{font-family:var(--en);font-size:20px;font-weight:800;color:var(--ink);background:var(--b4-bg);border:1px solid var(--b4);border-radius:14px;padding:2px 12px;line-height:1.4}
+.points b{font-variant-numeric:tabular-nums}
+.streak b{font-size:22px}
+.pts-float{position:fixed;left:50%;top:38%;transform:translateX(-50%);font-family:var(--en);font-weight:800;font-size:34px;color:var(--b4);text-shadow:0 2px 0 rgba(0,0,0,.15);pointer-events:none;z-index:60;animation:ptsup 1.2s ease-out forwards}
+@keyframes ptsup{0%{opacity:0;transform:translate(-50%,10px) scale(.7)}20%{opacity:1;transform:translate(-50%,0) scale(1.1)}100%{opacity:0;transform:translate(-50%,-70px) scale(1)}}
+.pts-line{font-size:16px;color:var(--ink2)} .pts-line b{font-family:var(--en);color:var(--ink);font-size:20px}
 </style>
 </head>
 <body>
@@ -328,27 +378,19 @@ window.addEventListener('unhandledrejection',function(e){ try{ var b=document.ge
 '; }catch(x){} });
 </script>
 
-<!-- 首页 -->
+<!-- 首页：关卡地图 -->
 <section class="screen" id="s-home">
-  <div class="top">
+  <div class="hd">
     <div>
       <div class="eyebrow">三年级 · 上册</div>
-      <h1>知识点闯关</h1>
+      <h1 id="apptitle">知识点闯关</h1>
     </div>
-    <div class="streak"><b id="streak">0</b><span>连续天数</span></div>
+    <div class="hd-right"><div class="points">🪙 <b id="points">0</b></div><div class="streak"><b id="streak">0</b><span>连续天数</span></div></div>
   </div>
-  <div class="hero" id="hero">
-    <div class="kicker" id="hero-kicker">今天的关卡</div>
-    <h2 id="hero-title">今日闯关</h2>
-    <div class="meta">
-      <span>要复习 <b id="m-due">0</b> 个</span>
-      <span>新知识点 <b id="m-new">0</b> 个</span>
-      <span>大约 <b id="m-min">6</b> 分钟</span>
-    </div>
-    <button class="btn big" id="btn-start">开始 ▸</button>
-  </div>
-  <div class="subjects" id="subjects"></div>
-  <p class="note" id="home-note"></p>
+  <div class="mascot"><span class="face" id="face">🦉</span><div class="bubble" id="bubble">…</div></div>
+  <div class="today" id="today"></div>
+  <div class="subj-pick" id="subjpick"></div>
+  <div class="path-wrap"><svg id="path" viewBox="0 0 320 100" width="100%"></svg></div>
 </section>
 
 <!-- 答题 -->
@@ -368,7 +410,7 @@ window.addEventListener('unhandledrejection',function(e){ try{ var b=document.ge
 
 <!-- 地图 -->
 <section class="screen" id="s-map" hidden>
-  <div class="top"><div><div class="eyebrow">知识点地图</div><h1>点亮它们</h1></div></div>
+  <div class="top"><div><div class="eyebrow">图鉴</div><h1>点亮它们</h1></div></div>
   <div class="tabs" id="map-tabs"></div>
   <div class="legend">
     <span><i style="background:var(--b0)"></i>没见过</span>
@@ -389,7 +431,7 @@ window.addEventListener('unhandledrejection',function(e){ try{ var b=document.ge
 
 <!-- 家长 -->
 <section class="screen" id="s-parent" hidden>
-  <div class="top"><div><div class="eyebrow">家长看板</div><h1>学到哪了</h1></div></div>
+  <div class="top"><div><div class="eyebrow">家长看板</div><h1>学到哪了</h1></div><button class="tiny" onclick="show('home')">返回 ▸</button></div>
   <div id="parent-body"></div>
 </section>
 
@@ -397,11 +439,11 @@ window.addEventListener('unhandledrejection',function(e){ try{ var b=document.ge
 
 <div class="sheet" id="sheet" hidden></div>
 <nav class="nav" id="nav"><div class="in">
-  <button data-go="home" class="on"><span class="ic">▶</span>今日</button>
-  <button data-go="map"><span class="ic">▦</span>地图</button>
-  <button data-go="dict"><span class="ic">♪</span>听写</button>
-  <button data-go="parent"><span class="ic">☰</span>家长</button>
+  <button data-go="home" class="on"><span class="ic">🏁</span>闯关</button>
+  <button data-go="map"><span class="ic">📚</span>图鉴</button>
+  <button data-go="dict"><span class="ic">🎧</span>听写</button>
 </div></nav>
+<canvas id="confetti" hidden></canvas>
 <div class="toast" id="toast"></div>
 <script>
 /* ================= 题库 · 语文 + 数学 =================
@@ -460,7 +502,6 @@ kp({id:'yw1-nr',s:'yw',u:1,name:'拟人句',
  lesson:'拟人，就是「把东西当成人来写」。风不会「唱歌」，花不会「点头」，可一旦这样写，东西就活了。判断窍门：看句子里的东西做的事，是不是只有人才会做。「鸟儿在听同学读课文」，鸟儿会「听课」？那就是拟人。',
  items:[
   {t:'mc',q:'下面哪句是拟人句？',o:['蝴蝶停在花朵上，好像在听同学们读课文。','蝴蝶停在花朵上。','蝴蝶的翅膀是黄色的。','花园里有很多蝴蝶。'],a:0,exp:'蝴蝶「听课」，这是人才会做的事，所以是拟人。'},
-  {t:'mc',q:'拟人句是把事物当成什么来写？',o:['人','动物','植物','机器'],a:0,exp:'拟人：拟就是「模仿」，把东西写得像人。'},
   {t:'mc',q:'「树枝不摇了，鸟儿不叫了，好像都在听同学们读课文。」这样写有什么好处？',o:['写出了窗外很安静，读书声很好听','说明树枝和鸟儿真的会听课','说明教室外面很吵','写出了树枝很高'],a:0,exp:'连树枝和鸟儿都停下来「听」，反过来说明读书声好听、外面很安静。'},
   {t:'mc',q:'下面哪句不是拟人句？',o:['太阳从东边升起来了。','太阳公公笑眯眯地爬上了山。','小草从土里探出头来打招呼。','月亮害羞地躲进了云里。'],a:0,exp:'「升起来」是太阳本来就会做的事，没有当成人来写。'},
  ]});
@@ -484,7 +525,6 @@ kp({id:'yw1-xz',s:'yw',u:1,name:'习作《猜猜他是谁》',
  lesson:'写一个同学，不写名字，让别人猜。要让人猜得出来，就得写他「和别人不一样的地方」：长什么样、常做什么表情、爱干什么、脾气怎样。写之前先在课间多观察几眼，把画面记在脑子里。',
  items:[
   {t:'mc',q:'写《猜猜他是谁》，最重要的是写清同学的什么？',o:['外貌、性格、爱好这些和别人不一样的地方','他的名字','他家住哪里','他考了多少分'],a:0,exp:'要让人猜出来，就要写出他的特点。名字当然不能写。'},
-  {t:'mc',q:'为了写好同学，平时可以怎么做？',o:['课间、值日、体育课时多观察，记住画面','考试的时候看他','写的时候再随便想','问他的分数'],a:0,exp:'留心校园生活，观察小伙伴真实的样子。'},
  ]});
 
 /* ---------------- 语文 · 第二单元 ---------------- */
@@ -563,7 +603,6 @@ kp({id:'yw2-rj',s:'yw',u:2,name:'习作《写日记》',
  lesson:'日记就是「今天的事，写给以后的自己看」。开头一行写清楚日期、星期、天气。内容不用惊天动地，看到的、听到的、想到的、做过的、甚至梦到的都可以写。这一单元的主题是秋天，留心看看身边什么变了。',
  items:[
   {t:'mc',q:'日记的第一行一般要写什么？',o:['日期、星期、天气','自己的名字','老师的名字','一句名言'],a:0,exp:'日期、星期、天气，三样写在最前面。'},
-  {t:'mc',q:'下面哪些内容可以写进日记？',o:['看到的、想到的、听到的、做过的都可以','只能写开心的事','只能写学习的事','只能写发生在学校的事'],a:0,exp:'见闻和感受都行，日记是自己的。'},
  ]});
 
 /* ================= 迷你三维演示引擎 =================
@@ -884,9 +923,7 @@ kp({id:'sx1-jc',s:'sx',u:1,name:'站在哪儿看，样子就不一样',
  lesson:'拿一个水杯放在桌上。你站着往下看，杯口是一个圆；你蹲下来平着看，它变成了一个长方形。同一个东西，站的地方不一样，看到的样子就不一样。做题的时候先问自己一句：我站在哪儿？',
  lessonHtml:`<div class="figrow">${solid3d('cylinder',{controls:['top','front','iso']})}<div class="cap2">这个圆柱是活的，用手指拖着转一转。<br>点「从上面看」，它会转到你头顶的角度，变成一个圆。<br>点「从前面看」，它又变成长方形。</div></div>`,
  items:[
-  {t:'mc',q:'我们通常从几个方向观察物体？',o:['前、后、左、右、上','只有前面','前和后','上和下'],a:0,exp:'五个方向：前面、后面、左面、右面、上面。'},
   {t:'tf',q:'从不同位置看同一个物体，看到的形状一定一样。',a:false,exp:'换个位置，看到的样子常常不一样。杯子从上面看是圆，从前面看是长方形。'},
-  {t:'mc',q:'观察物体时，眼睛应该怎么看？',o:['正对物体，视线垂直物体表面','斜着看','闭一只眼','从很远的地方看'],a:0,exp:'正对着、视线垂直，看到的形状才准。'},
   {t:'mc',q:'站在一个固定位置看一个长方体盒子，最多能看到几个面？',o:['3 个','6 个','4 个','2 个'],a:0,exp:'最多 3 个：比如前面、上面、右面。后面、下面和另一个侧面都被挡住了。'},
   {t:'mc',q:'判断物体的左面、右面，要站在谁的角度？',o:['观察者（看的人）','物体自己','老师','都可以'],a:0,exp:'以看的人为准。'},
   {t:'mc',q:'小明站在物体前面看，小红站在物体后面看，他们看到的图形一般是？',o:['左右相反','完全一样','上下相反','颜色不同'],a:0,exp:'前面和后面正对着，看到的图形左右相反，像照镜子。'},
@@ -920,7 +957,6 @@ kp({id:'sx1-sz',s:'sx',u:1,name:'骰子：对面加起来是 7',
         const ask=[['下面（压在桌子上的那一面）',7-t,`上面是 ${t}，7 − ${t} = ${7-t}。`,'bottom','翻过去看底面'],['后面',7-f,`前面是 ${f}，7 − ${f} = ${7-f}。`,'back','转过去看后面'],['左面',7-r,`右面是 ${r}，7 − ${r} = ${7-r}。`,'left','转过去看左面']][R_(0,2)];
         const html=dice3d(t,f,r,{clamp:true});
         return {kind:'num',html,prompt:`这是一个标准骰子。看不见的<b>${ask[0]}</b>是几点？`,ans:ask[1],exp:ask[2],reveal:{id:SC.last,view:ask[3],label:ask[4]}}; },
-  {t:'mc',q:'标准骰子上，相对两个面的点数加起来是多少？',o:['7','6','8','10'],a:0,exp:'1+6、2+5、3+4，都等于 7。'},
   {t:'tf',q:'所有的正方体，相对两个面上的数字和都是 7。',a:false,exp:'只有标准骰子才有这个规定，普通正方体没有。'},
  ]});
 kp({id:'sx1-zh',s:'sx',u:1,name:'一堆小方块，从三个方向看',
@@ -940,18 +976,14 @@ kp({id:'sx1-zh',s:'sx',u:1,name:'一堆小方块，从三个方向看',
   ()=>{ const Hm=randLayout(true); const n=Hm.flat().reduce((a,b)=>a+b,0);
         const html=cubes3d(Hm,{clamp:true});
         return {kind:'num',html,prompt:'数一数，这堆一共用了几个小方块？<span class="zh">一列一列数，别漏了下面垫着的</span>',ans:n,exp:`每一列从下往上数，加起来一共 ${n} 个。`,reveal:{id:SC.last,view:'explode',label:'分层看一看'}}; },
-  {t:'mc',q:'从前面观察拼搭的立体图形，主要看什么？',o:['有几列，每一列有几层','有几行','底面怎么摆','颜色'],a:0,exp:'前面看：数列数和每列的层数。'},
-  {t:'tf',q:'画从某个方向看到的图形时，被挡住的方块也要画出来。',a:false,exp:'挡住的看不见，看不见就不画。'},
  ]});
 kp({id:'sx1-zk',s:'sx',u:1,name:'把纸盒剪开摊平',
  lesson:'找一个牙膏盒，沿着棱把它剪开、摊平，你会得到一张"展开图"。数一数：盒子有 6 个面，正对着的两个面一模一样，而且它们永远不挨着。要把一个没开口的盒子摊平，至少要剪开 7 条棱；剪法不同，摊出来的形状也不一样。',
  lessonHtml:`<div class="figrow">${solid3d('cuboid',{controls:['spin','iso']})}<span class="arrow">剪开 7 条棱 →</span>${svgNetPlain([[1,0],[0,1],[1,1],[2,1],[3,1],[1,2]])}</div>`,
  items:[
   {t:'mc',q:'长方体一共有几个面？',o:['6 个','4 个','8 个','12 个'],a:0,exp:'上下、前后、左右，一共 6 个面。'},
-  {t:'mc',q:'长方体相对的两个面有什么关系？',o:['完全相同，而且不相邻','大小不同','挨在一起','一定是正方形'],a:0,exp:'相对的面一模一样，并且永远不挨着。'},
   {t:'num',q:'一个没有开口的长方体纸盒，要展开平铺，至少剪开几条棱？',a:7,exp:'长方体有 12 条棱，至少剪 7 条才能摊平，剩下 5 条连着面。'},
   {t:'tf',q:'同一个长方体纸盒，不管怎么剪，展开图的形状都一样。',a:false,exp:'剪的棱不一样，摊开的形状就不一样。'},
-  {t:'tf',q:'展开纸盒时，每个面至少要有一条边和别的面连着。',a:true,exp:'不能剪散，面和面要连着，才叫展开图。'},
  ]});
 kp({id:'sx1-zf',s:'sx',u:1,name:'展开图折起来，谁和谁是对面',
  lesson:'下面这张纸有六个格子。拖动滑块，或者点「折起来」，看着它一点点变成正方体。折好以后它会自己转一圈，你找找 A 的对面是谁。规律很简单：挨在一起的两个格子，折起来是邻居，永远不可能是对面；一排里隔一个的才是对面。还有一条口诀：「田字格」不能折，一排最多四个。',
@@ -972,8 +1004,6 @@ kp({id:'sx1-tl',s:'sx',u:1,name:'只看一张图，猜不出全貌',
  lesson:'下面两堆方块搭得不一样，可是你分别点「从前面看」，会发现两张图一模一样。为什么？因为从前面看只能看到每列多高，后面藏了几个看不出来。所以只有一个方向的图，是猜不出立体图形长什么样的；多看几个方向，范围才会越来越小。',
  lessonHtml:`<div class="figrow">${cubes3d([[2,0],[1,1]],{controls:['front','iso'],size:150})}${cubes3d([[1,0],[2,1]],{controls:['front','iso'],size:150})}</div>`,
  items:[
-  {t:'tf',q:'只知道从一个方向看到的图形，就能确定这个立体图形的唯一形状。',a:false,exp:'一个方向不够，有很多种搭法都可能看到同样的图。'},
-  {t:'mc',q:'想更准确地知道立体图形的样子，应该？',o:['结合多个方向看到的图形','只看前面','只看上面','猜一个'],a:0,exp:'多个方向的图合在一起，范围就越来越小。'},
   ()=>{ const Hm=randLayout(false); const v=views(Hm);
         let alt=null; for(let k=0;k<40&&!alt;k++){ const H2=randLayout(false); if(gridKey(views(H2).front)===gridKey(v.front)&&JSON.stringify(H2)!==JSON.stringify(Hm)) alt=H2; }
         if(!alt) return {kind:'choice',html:viewGrid(v.front),prompt:'这是从前面看到的图。只凭这一张图，能确定小方块是怎么搭的吗？',opts:['不能，可能有好几种搭法','能，只有一种搭法'],ans:0,exp:'只有一个方向的图，后面藏着几个方块看不出来。'};
@@ -1072,8 +1102,6 @@ function storySteps(){
 kp({id:'sx2-jb',s:'sx',u:2,name:'一级运算和二级运算',
  lesson:'加法、减法是「一级运算」，乘法、除法是「二级运算」。记法：二级比一级「高一级」，算的时候先算高的（乘除），再算低的（加减）。就像排队，级别高的先上。',
  items:[
-  {t:'mc',q:'加法和减法叫什么运算？',o:['一级运算','二级运算','高级运算','混合运算'],a:0,exp:'加减是一级。'},
-  {t:'mc',q:'乘法和除法叫什么运算？',o:['二级运算','一级运算','三级运算','简便运算'],a:0,exp:'乘除是二级，比加减高一级，所以先算。'},
   {t:'mc',q:'下面哪个算式只有二级运算？',o:['25 ÷ 5 × 3','24 + 15 − 13','49 ÷ 7 + 9','28 − 6 × 3'],a:0,exp:'只有乘和除的是二级运算。'},
  ]});
 kp({id:'sx2-tj',s:'sx',u:2,name:'同级运算：从左往右',
@@ -1092,8 +1120,6 @@ kp({id:'sx2-gf',s:'sx',u:2,name:'脱式计算的规矩',
  lesson:'脱式计算就是一步一步往下写。三条规矩：等号要上下对齐；这一步没算的数和符号，要原样抄下来；不能跳步。跳步、漏抄、等号歪掉，是最常见的三个错。',
  lessonHtml:`<div class="figrow">${work(['28 − 6 × 3','= 28 − 18','= 10'])}<div class="cap2">✓ 等号对齐<br>✓ 28 − 原样抄下来<br>✓ 一步一行不跳步</div></div>`,
  items:[
-  {t:'tf',q:'脱式计算时，等号要上下对齐。',a:true,exp:'等号对齐，一步一步，看着就清楚。'},
-  {t:'tf',q:'脱式计算时，不参与这一步计算的数和符号可以先不写，最后再补。',a:false,exp:'要原样抄写，漏抄了下一步就不知道算什么了。'},
   {t:'mc',q:'算 28 − 6 × 3，第一行下面应该写成？',o:['= 28 − 18','= 22 × 3','= 28 − 6','= 18'],a:0,exp:'先算 6 × 3 = 18，没算的 28 − 原样抄下来。'},
   {t:'mc',html:work(['49 ÷ 7 + 9','= 7 + 9 = 16']),q:'上面这个脱式哪里不对？',o:['跳步了，应该分两行写','等号不对齐','先算错了','没有错'],a:0,exp:'一步一行。应该写成「= 7 + 9」再换一行「= 16」。'},
  ]});
@@ -1109,16 +1135,13 @@ kp({id:'sx2-jz',s:'sx',u:2,name:'简便计算：连减和连除',
                  {kind:'num',q:`括号里：${p[0]} + ${p[1]} = ?`,ans:p[0]+p[1],hint:`${p[0]} + ${p[1]} = ${p[0]+p[1]}，凑成整十了。`,after:`= ${a} − ${p[0]+p[1]}`},
                  {kind:'num',q:`${a} − ${p[0]+p[1]} = ?`,ans:a-p[0]-p[1],hint:`${a} − ${p[0]+p[1]} = ${a-p[0]-p[1]}。`,after:`= ${a-p[0]-p[1]}`}],
           exp:`两个数凑成 ${p[0]+p[1]}，一下就减掉了，这就是「简便」的意思。`}; },
-  {t:'mc',q:'a − b − c 等于下面哪个？',o:['a − (b + c)','a − (b − c)','a + (b − c)','(a − b) + c'],a:0,exp:'连减两个数，等于减去它们的和。'},
  ]});
 kp({id:'sx2-bz',s:'sx',u:2,name:'解决问题五步',
  lesson:'遇到应用题不慌，五步走：一读题，二画图，三找数量关系，四列式解答，五检验反思。最容易漏的是第五步：做完回头看一眼，把答案带回题目里对一对。',
  items:[
   {t:'order',tokens:['读题','画图','找数量关系','列式解答','检验反思'],zh:'把解决问题的五个步骤按顺序排好',exp:'一读题、二画图、三找关系、四列式、五检验。'},
   {t:'mc',q:'做完题以后，把答案带回题目里对一对，这是哪一步？',o:['检验反思','读题','画图','找数量关系'],a:0,exp:'最后一步，检验反思，最容易被跳过。'},
-  {t:'mc',q:'从已知条件出发，一步步算出中间量，最后解决问题，这是什么方法？',o:['综合法','分析法','画图法','猜测法'],a:0,exp:'综合法：从条件往前推。'},
   {t:'mc',q:'先看最后要解决什么问题，再想需要哪些条件，回题目里找，这是什么方法？',o:['分析法','综合法','画图法','列表法'],a:0,exp:'分析法：从问题往回想。'},
-  {t:'mc',q:'画线段图把题目条件画出来，理清数量关系，这是什么方法？',o:['画图法','综合法','分析法','口算法'],a:0,exp:'画图法：看得见就想得清。'},
  ]});
 kp({id:'sx2-yy',s:'sx',u:2,name:'两步应用题',
  lesson:'两步应用题的关键是找到「中间量」，就是题目没直接问、但不算出来就走不下去的那个数。画一条线段图，整条是总数，分成两段，一眼就看出缺哪一段。算完一定把答案带回去检验。',
@@ -1152,6 +1175,9 @@ wordKPs(2,[
  ['pack','收拾好','Pack my pen.'],['guess','猜','Guess!'],['eraser','橡皮','Is this your eraser?'],['for','为了','This is for you.'],
 ]);
 
+/* 虚词不单独出题，只在句子排序里出现 */
+const DROP_WORDS=new Set(['in','for','not','it','this','that','too','with','our','me','there','back','now','from','they','we']);
+for(let i=KPS.length-1;i>=0;i--){ if(KPS[i].word && DROP_WORDS.has(KPS[i].word.en)) KPS.splice(i,1); }
 /* ---- 短语 ---- */
 function phraseKP(id,u,name,lesson,list){
   const items=[];
@@ -1313,10 +1339,10 @@ const DICT = [
   words:['许多','粗壮','敬爱','好奇','招引','安静','热闹','古老','洁白','放假','摇头晃脑','披头散发','张牙舞爪','提心吊胆','面红耳赤','手忙脚乱','手疾眼快','口干舌燥','昂首挺胸','神采飞扬','铜墙铁壁','鸦雀无声']},
  {id:'d-yw2',s:'yw',name:'语文 第二单元 词语',sub:'近义词、反义词、四季词语',lang:'zh',
   words:['明朗','排列','凌乱','留意','凉爽','香甜','叮咛','道别','透明','掠过','辽阔','饱满','潮湿','仔细','温柔','打磨','挑选','春光明媚','桃红柳绿','鸟语花香','烈日当空','绿树成荫','天高云淡','秋高气爽','瓜果飘香','天寒地冻','冰天雪地','滴水成冰','亮晶晶','湿漉漉','绿油油']},
- {id:'d-yy1',s:'yy',name:'英语 Unit 1 单词',sub:'29 个必会单词',lang:'en',
-  words:['friend','meet','play','happy','new','they','nine','she','too','we','from','he','come','help','here','thank','great','song','dear','sing','now','know','our','with','me','everyone','twin','together','everybody']},
- {id:'d-yy2',s:'yy',name:'英语 Unit 2 单词',sub:'23 个必会单词',lang:'en',
-  words:['pen','pencil','bag','ruler','this','in','schoolbag','it','not','that','yes','find','bye','kid','there','please','back','look','thing','pack','guess','eraser','for']},
+ {id:'d-yy1',s:'yy',name:'英语 Unit 1 单词',sub:'21 个必会单词',lang:'en',
+  words:['friend','meet','play','happy','new','nine','she','he','come','help','here','thank','great','song','dear','sing','know','everyone','twin','together','everybody']},
+ {id:'d-yy2',s:'yy',name:'英语 Unit 2 单词',sub:'15 个必会单词',lang:'en',
+  words:['pen','pencil','bag','ruler','schoolbag','yes','find','bye','kid','please','look','thing','pack','guess','eraser']},
 ];
 /* ================= 引擎 · 核心 + 答题 ================= */
 const SUBJ = {yw:{name:'语文',cls:'yw'},sx:{name:'数学',cls:'sx'},yy:{name:'英语',cls:'yy'}};
@@ -1495,14 +1521,12 @@ function makeItem(k){
 }
 
 /* ---------- 组关卡 ---------- */
-function buildSession(subj){
+function buildSession(subj, N, newCap){
   const today = dayN();
   const pool = KPS.filter(k=>!subj || k.s===subj);
   const due = pool.filter(k=>{const r=rec(k.id);return r.box>0 && r.due<=today;});
   const fresh = pool.filter(k=>rec(k.id).box===0);
   const later = pool.filter(k=>{const r=rec(k.id);return r.box>0 && r.due>today;});
-  const N = subj ? 12 : 15;
-  const newCap = subj ? 6 : 8;
   let list = shuffle(due).sort((a,b)=>rec(a.id).box-rec(b.id).box).slice(0,N);
   // 新知识点：三科轮流拿；英语里单词和语法句型交替，避免单词淹没
   const bySubj = {yw:[],sx:[],yy:[]}; shuffle(fresh).forEach(k=>bySubj[k.s].push(k));
@@ -1515,6 +1539,7 @@ function buildSession(subj){
     if(!got) break;
   }
   if(list.length<N) list = list.concat(shuffle(later).slice(0,N-list.length));
+  if(list.length<N){ const rest=shuffle(fresh.filter(k=>!list.includes(k))); list = list.concat(rest.slice(0,N-list.length)); }   // 实在没题了，才多放新的
   return shuffle(list);
 }
 function counts(subj){
@@ -1528,10 +1553,22 @@ function counts(subj){
 const PRAISE=['答对了！','漂亮！','就是它！','太棒了！','稳！','厉害了！','没错！','对！'];
 const OOPS=['差一点','再看看','没关系，记住它','这题有坑','下次它还会来'];
 let Q = null; // 当前关卡
+const LINES={
+  praise:['答对了！','漂亮！','就是它！','太棒了！','稳！','厉害了！','没错！','对！','一次就中！'],
+  oops:['差一点','再看看','没关系，记住它','这题有坑','下次它还会来'],
+  retry:['不对哦，再想想，还有一次机会','嗯……换一个试试？','差一点，再来一次'],
+  hint:['我帮你划掉一个错的','这个肯定不是，划掉','少一个选项，好选多了'],
+};
+const pickLine=a=>a[rnd(a.length)];
+const NEW_PER_DAY=4, LEVEL_SIZE=5, DAILY_LEVELS=3;
 function startSession(subj){
-  const list = buildSession(subj);
+  const today=dayN(); const d=S.days[today]||{n:0,ok:0}; S.days[today]=d;
+  const n=(S.levels||[]).length+1; const boss=n%5===0;
+  const newCap = boss ? 0 : Math.max(0, NEW_PER_DAY-(d.newKp||0));
+  const list = buildSession(subj, boss?8:LEVEL_SIZE, newCap);
   if(!list.length){ toast('这一科的题都练过了，去别的科看看'); return; }
-  Q = {list, i:0, right:0, ups:[], downs:[], subj, answered:false};
+  d.newKp=(d.newKp||0)+list.filter(k=>rec(k.id).box===0).length; save();
+  Q = {list, i:0, right:0, clean:0, ups:[], downs:[], subj, answered:false, level:n, boss};
   try{ speechSynthesis.speak(new SpeechSynthesisUtterance('')); }catch(e){}   // iOS：在手势里先说一句空话，之后才允许自动朗读
   show('quiz'); nextQ();
 }
@@ -1540,8 +1577,8 @@ function nextQ(){
   if(Q.i>=Q.list.length) return finish();
   const k = Q.list[Q.i]; const r = rec(k.id);
   $('#prog').style.width = (Q.i/Q.list.length*100)+'%';
-  $('#cnt').textContent = `${Q.i+1}/${Q.list.length}`;
-  Q.item = makeItem(k); Q.answered=false; Q.picked=[];
+  $('#cnt').innerHTML = `<span class="lvl">${Q.boss?'🏰 关底':'第 '+Q.level+' 关'}</span> · ${Q.i+1}/${Q.list.length}`;
+  Q.item = makeItem(k); Q.answered=false; Q.picked=[]; Q.tried=0; Q.hinted=false;
   if(r.seen===0) renderLesson(k, ()=>renderQ(k)); else renderQ(k);
 }
 function renderLesson(k, go){
@@ -1625,8 +1662,12 @@ function renderQ(k){
     <div class="prompt">${it.prompt}</div>
     ${it.speak?`<button class="spk" id="spk">🔊 再听一遍</button>`:''}
     ${body}
+    <div class="hintrow">${it.kind==='choice'&&it.opts.length>2?`<button class="hintbtn" id="hint">💡 给个提示</button>`:''}<span class="retry" id="retrymsg"></span></div>
     <div id="fb"></div>`;
   $('#relesson').onclick=()=>lessonSheet(k); mount3d(c); bindSay(c);
+  const hb=$('#hint'); if(hb) hb.onclick=()=>{ if(Q.answered||Q.hinted) return; Q.hinted=true; hb.disabled=true;
+    const wrongs=[...c.querySelectorAll('.opt')].filter(b=>+b.dataset.i!==it.ans && !b.classList.contains('tried') && !b.classList.contains('gone'));
+    if(wrongs.length){ wrongs[rnd(wrongs.length)].classList.add('gone'); } $('#retrymsg').textContent=pickLine(LINES.hint); tone([[520,.08,0],[700,.1,.09]]); };
   if(it.speak){ $('#spk').onclick=()=>say(it.speak.t,it.speak.l); if(it.auto||k.word) setTimeout(()=>say(it.speak.t,it.speak.l),250); }
   if(it.kind==='choice'){
     c.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(+b.dataset.i));
@@ -1641,25 +1682,31 @@ function renderQ(k){
   }
 }
 /* 记录成绩并返回升级信息 */
-function commit(k, ok){
+function commit(k, res){
+  const ok = res===true, hold = res==='hold';
   const r = rec(k.id), today=dayN(), before=r.box;
-  r.seen++; if(ok){ r.ok++; r.box=Math.min(4,r.box+1); } else { r.ng++; r.box=Math.max(1,r.box-1); }
-  r.due = today + (ok ? IV[r.box] : 1);
+  r.seen++;
+  if(ok){ r.ok++; r.box=Math.min(4,r.box+1); r.due=today+IV[r.box]; }
+  else if(hold){ r.box=Math.max(1,r.box); r.due=today+Math.max(1,Math.round(IV[r.box]/2)); }
+  else { r.ng++; r.box=Math.max(1,r.box-1); r.due=today+1; }
   S.kp[k.id]=r;
-  const d = S.days[today] || {n:0,ok:0}; d.n++; if(ok) d.ok++; S.days[today]=d;
+  const d = S.days[today] || {n:0,ok:0}; d.n++; if(ok||hold) d.ok++; S.days[today]=d;
   save();
-  if(ok) Q.right++;
+  if(ok||hold) Q.right++; if(ok && !Q.hinted) Q.clean++;
+  const pts = ok ? (Q.hinted?6:10) : hold ? 5 : 0; Q.pts=(Q.pts||0)+pts; S.points=(S.points||0)+pts; save();
+  if(pts) setTimeout(()=>ptsFloat(pts),50);
   const up = r.box>before && r.box>=2;
   if(up) Q.ups.push({k,box:r.box});
   if(r.box<before) Q.downs.push({k,box:r.box});
-  ok ? sndOK() : sndBad();
+  (ok||hold) ? sndOK() : sndBad();
   if(up) setTimeout(sndUp,300);
   return up ? `<div class="chip up">⭐ ${esc(k.name)} 升到「${BOXNAME[r.box]}」</div>` : '';
 }
+function ptsFloat(n){ const f=document.createElement('div'); f.className='pts-float'; f.textContent='+'+n; document.body.appendChild(f); setTimeout(()=>f.remove(),1300); }
 function feedback(ok, correctText, exp, levelMsg){
   const rv=Q.item.reveal; const expTxt=Q.item.expSay ? (ok?'':'这题没全对。')+Q.item.expSay : (correctText||'')+' '+(exp||'');
   $('#fb').innerHTML = `<div class="fb ${ok?'ok':'bad'}">
-      <div class="head">${ok?PRAISE[rnd(PRAISE.length)]:OOPS[rnd(OOPS.length)]}</div>
+      <div class="head">${ok?(Q.tried?'这次对了 ✓':pickLine(LINES.praise)):pickLine(LINES.oops)}</div>
       ${correctText||''}<div class="exp">${exp||''} ${spkBtn(expTxt,'听讲解','tiny-say')}</div>${levelMsg||''}
       <div class="acts">${rv?`<button class="btn ghost" id="reveal">🔄 ${esc(rv.label)}</button>`:''}<button class="btn big" id="next" style="${rv?'width:auto;flex:1':''}">${Q.i+1>=Q.list.length?'看看成绩 ▸':'下一题 ▸'}</button></div></div>`;
   if(rv) $('#reveal').onclick=()=>{ sceneGo(rv.id, rv.view); $('#reveal').blur(); };
@@ -1668,10 +1715,22 @@ function feedback(ok, correctText, exp, levelMsg){
   $('#next').focus();
 }
 function answer(val){
-  if(Q.answered) return; Q.answered=true;
+  if(Q.answered) return;
   const k=Q.list[Q.i], it=Q.item;
   const ok = it.kind==='choice' ? val===it.ans : it.kind==='tiles' ? String(val).toLowerCase()===String(it.ans).toLowerCase() : val===it.ans;
-  const levelMsg = commit(k, ok);
+  // 第一次答错：给一次重来的机会
+  if(!ok && Q.tried===0){
+    Q.tried=1; sndBad();
+    if(it.kind==='choice'){ const b=document.querySelector(`.opt[data-i="${val}"]`); if(b) b.classList.add('tried'); }
+    else if(it.kind==='tiles'){ Q.picked=[]; const arow=$('#arow'); arow.classList.add('wrong'); setTimeout(()=>{ arow.classList.remove('wrong'); arow.innerHTML=''; document.querySelectorAll('#tiles .tile').forEach(t=>t.classList.remove('used')); $('#check').disabled=true; },500); }
+    else { const n=$('#numin'); n.classList.add('wrong'); setTimeout(()=>{ n.classList.remove('wrong'); n.innerHTML='&nbsp;'; },500); }
+    $('#retrymsg').textContent=pickLine(LINES.retry); const hb=$('#hint'); if(hb) hb.disabled=true;
+    if(S.autoRead!==false) sayMixed($('#retrymsg').textContent);
+    return;
+  }
+  Q.answered=true;
+  const res = ok ? (Q.tried?'hold':true) : false;
+  const levelMsg = commit(k, res);
   if(it.kind==='choice'){
     document.querySelectorAll('.opt').forEach(b=>{ b.disabled=true; const i=+b.dataset.i; if(i===it.ans) b.classList.add('right'); else if(i===val) b.classList.add('wrong'); });
     if(it.fill) $('.blank').textContent = it.fill;
@@ -1680,6 +1739,7 @@ function answer(val){
   } else {
     $('#numin').classList.add(ok?'right':'wrong');
   }
+  const hb=$('#hint'); if(hb) hb.disabled=true; $('#retrymsg').textContent='';
   if(it.speakAfter) setTimeout(()=>say(it.speakAfter.t,it.speakAfter.l),400);
   const correctText = !ok ? `<div>正确答案：<b>${it.kind==='choice'?(it.en?esc(it.opts[it.ans]):(it.optHtml?'看上面绿色的那个':it.opts[it.ans])):esc(it.ans)}</b></div>` : '';
   feedback(ok, correctText, it.exp, levelMsg);
@@ -1730,26 +1790,31 @@ function stepAnswer(val){
   bindSay(q); if(!ok && S.autoRead!==false) setTimeout(()=>sayMixed(hintTxt),200);
   if(!last){ $('#stepnext').onclick=()=>{ Q.step++; renderStep(); }; $('#stepnext').focus(); return; }
   // 全部步骤走完：一步都没错才算对
-  const k=Q.list[Q.i]; const allOk = Q.stepWrong===0;
-  const levelMsg = commit(k, allOk);
-  feedback(allOk, allOk?'':`<div>有 ${Q.stepWrong} 步没对，明天再来一遍。</div>`, it.exp, levelMsg);
+  const k=Q.list[Q.i]; const res = Q.stepWrong===0 ? true : Q.stepWrong===1 ? 'hold' : false;
+  const levelMsg = commit(k, res);
+  feedback(res!==false, res===true?'':`<div>有 ${Q.stepWrong} 步没对${res==='hold'?'，不过做完了':'，明天再来一遍'}。</div>`, it.exp, levelMsg);
 }
 function finish(){
   const today=dayN();
-  if(S.lastDay!==today){ S.streak = (S.lastDay===today-1) ? S.streak+1 : 1; S.lastDay=today; }
-  S.sessions++; save();
-  const n=Q.list.length, r=Q.right;
-  const msg = r===n ? '全对！这一关被你踩平了。' : r>=n*0.8 ? '很稳。错的那几个明天还会来找你。' : r>=n*0.5 ? '有几个新面孔，多见几次就熟了。' : '今天的题偏难，没关系，错题会在明天再出现。';
+  if(S.lastDay!==today){ S.streak = (S.lastDay===today-1) ? S.streak+1 : 1; S.lastDay=today; S.best=Math.max(S.best||0,S.streak); }
+  const n=Q.list.length, stars = Q.clean>=n?3 : Q.clean>=n-2?2 : 1;
+  S.levels=S.levels||[]; S.levels.push({n:Q.level,s:stars,d:today,b:Q.boss?1:0});
+  const d=S.days[today]||{n:0,ok:0}; d.levels=(d.levels||0)+1; S.days[today]=d; S.sessions++; save();
+  const doneToday=d.levels;
+  let bonus = (stars===3?30:stars===2?15:5) * (Q.boss?2:1); if(doneToday===DAILY_LEVELS) bonus+=20;
+  S.points=(S.points||0)+bonus; save(); const got=(Q.pts||0)+bonus;
+  const line = stars===3 ? (Q.boss?'关底也被你踩平了！':'满星！这一关一个坑都没踩。') : stars===2 ? '差一点满星，错的那个明天还会来。' : '过了！错的几个明天再见，多见几次就熟了。';
+  const enough = doneToday>=DAILY_LEVELS ? `今天 ${doneToday} 关都闯完了，够了，明天见！` : `今天第 ${doneToday} 关，还差 ${DAILY_LEVELS-doneToday} 关。`;
   $('#result').innerHTML = `
-    <div class="muted">今天这一关</div>
-    <div class="score num">${r}<small> / ${n}</small></div>
-    <p style="font-size:17px;max-width:32ch">${msg}</p>
+    <div class="lvl-title">${Q.boss?'🏰 关底':'第 '+Q.level+' 关'} 通过</div>
+    <div class="done-stars">${'★★★'.split('').map((c,i)=>`<span class="${i<stars?'':'off'}">★</span>`).join('')}</div>
+    <div class="pts-line">🪙 本关 <b>+${got}</b> 积分${doneToday===DAILY_LEVELS?'（含今天闯满 3 关的 +20）':''} · 总共 <b>${S.points}</b></div>
+    <div class="mascot" style="text-align:left"><span class="face">🦉</span><div class="bubble">${line} ${enough}</div></div>
     ${Q.ups.length?`<div><div class="muted" style="margin-bottom:6px">升级的知识点</div><div class="ups">${Q.ups.map(u=>`<span class="chip up">⭐ ${esc(u.k.name)} → ${BOXNAME[u.box]}</span>`).join('')}</div></div>`:''}
-    ${Q.downs.length?`<div><div class="muted" style="margin-bottom:6px">掉了一级，明天再来</div><div class="ups">${Q.downs.map(u=>`<span class="chip down">${esc(u.k.name)}</span>`).join('')}</div></div>`:''}
-    <div class="muted">连续 <b class="num" style="color:var(--yw);font-size:18px">${S.streak}</b> 天 · 今天够了，明天见</div>
-    <div class="acts" style="width:100%"><button class="btn ghost" style="flex:1" onclick="show('map')">看地图</button><button class="btn" style="flex:1" onclick="show('home')">回首页</button></div>`;
+    <div class="acts" style="width:100%"><button class="btn ghost" style="flex:1" onclick="show('home')">回地图</button><button class="btn" style="flex:1" onclick="startSession(Q.subj)">${doneToday>=DAILY_LEVELS?'再闯一关 ▸':'下一关 ▸'}</button></div>`;
   show('done');
-  if(r===n) sndUp();
+  if(S.autoRead!==false) setTimeout(()=>sayMixed(line+' '+enough),400);
+  if(stars===3) sndUp(); confetti(stars);
 }
 /* ================= 讲解连环画 =================
    每个知识点 3～5 格：{e:大图标, t:一句话, s:补一句, d:能点的东西, say:朗读文本(可省)}
@@ -2067,28 +2132,52 @@ function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('sh
 function openSheet(html){ const s=$('#sheet'); s.innerHTML=`<div class="in">${html}</div>`; s.hidden=false; }
 function closeSheet(){ $('#sheet').hidden=true; }
 
-/* ---------- 首页 ---------- */
+/* ---------- 首页：关卡地图 ---------- */
+function greetLine(c,d){
+  const hour=new Date().getHours(); const hi = hour<9?'早上好！':hour<12?'上午好！':hour<18?'下午好！':'晚上好！';
+  const lv=(d.levels||0);
+  if(lv>=DAILY_LEVELS) return hi+' 今天的关都闯完了，想再来一关也行，不来也行。';
+  if(lv>0) return hi+` 今天已经过了 ${lv} 关，再来 ${DAILY_LEVELS-lv} 关就齐了。`;
+  if(c.due>0) return hi+` 有 ${c.due} 个老朋友等你复习，先去把它们点亮。`;
+  if(S.sessions===0) return hi+' 我是点点。每关五道题，答对就亮星星。第一关走起？';
+  return hi+' 今天的第一关准备好了。';
+}
 function renderHome(){
-  const today=dayN(); const c=counts(null); const doneToday = !!S.days[today] && S.lastDay===today;
+  const today=dayN(); const c=counts(S.subj||null); const d=S.days[today]||{n:0,ok:0};
   $('#streak').textContent = (S.lastDay===today||S.lastDay===today-1) ? S.streak : 0;
-  const n = Math.min(15, c.due + Math.min(6,c.fresh));
-  $('#m-due').textContent=c.due; $('#m-new').textContent=Math.min(6,c.fresh); $('#m-min').textContent=Math.max(3,Math.round(n*0.45));
-  const hour=new Date().getHours();
-  $('#hero-kicker').textContent = hour<12?'早上好':hour<18?'下午好':'晚上好';
-  $('#hero-title').textContent = doneToday ? '今天的关已经过了' : c.due>0 ? `有 ${c.due} 个知识点等你复习` : '今天的关卡';
-  $('#btn-start').textContent = doneToday ? '再闯一关 ▸' : '开始 ▸';
-  let badge=$('#hero .done-badge'); if(doneToday){ if(!badge){badge=document.createElement('div');badge.className='done-badge';badge.textContent='今日已完成';$('#hero').appendChild(badge);} } else if(badge) badge.remove();
-  $('#subjects').innerHTML = Object.keys(SUBJ).map(s=>{
-    const cc=counts(s); const t=cc.total; const b=cc.boxes;
-    return `<button class="subj ${s}" data-s="${s}">
-      <div class="name">${SUBJ[s].name}</div>
-      <div class="bar"><i class="g" style="width:${b[4]/t*100}%"></i><i class="s" style="width:${b[3]/t*100}%"></i><i class="c" style="width:${b[2]/t*100}%"></i><i class="l" style="width:${b[1]/t*100}%"></i></div>
-      <div class="stat"><span>金 <b>${b[4]}</b>/${t}</span><span>${cc.due?`待复习 <b style="color:var(--yw)">${cc.due}</b>`:'只练这科 ▸'}</span></div></button>`;
+  $('#bubble').textContent = greetLine(c,d);
+  const lv=(S.levels||[]); const todayStars=lv.filter(x=>x.d===today).reduce((a,x)=>a+x.s,0);
+  $('#points').textContent = S.points||0;
+  $('#today').innerHTML = `<span>今天 <b>${d.levels||0}</b> / ${DAILY_LEVELS} 关</span><span class="stars">${'★'.repeat(Math.min(9,todayStars))||'☆'}</span><span>总星 <b>${lv.reduce((a,x)=>a+x.s,0)}</b></span><span>待复习 <b>${c.due}</b></span>`;
+  // 路径：从已过的最后 3 关画到往后 5 关
+  const cur=lv.length+1; const from=Math.max(1,cur-2), to=cur+4; const nodes=[]; for(let n=from;n<=to;n++) nodes.push(n);
+  const xs=[70,160,250,160]; const gap=58; const H=nodes.length*gap+20;
+  const pos=nodes.map((n,i)=>[xs[(n-1)%4], H-20-i*gap]);
+  const rail=pos.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');
+  const doneUpto=pos.findIndex((p,i)=>nodes[i]===cur); const railDone=pos.slice(0,doneUpto+1).map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');
+  const svg=$('#path'); svg.setAttribute('viewBox',`0 0 320 ${H}`); svg.style.height=(H*(svg.clientWidth||320)/320)+'px';
+  svg.innerHTML = `<path class="rail" d="${rail}"/><path class="rail done" d="${railDone}"/>` + nodes.map((n,i)=>{
+    const [x,y]=pos[i]; const rec_=lv[n-1]; const st = n<cur?'done':n===cur?'cur':''; const boss=n%5===0;
+    const label = rec_ ? `<text class="st" x="${x}" y="${y+34}">${'★'.repeat(rec_.s)}</text>` : (n===cur?`<text class="go" x="${x}" y="${y+38}">${boss?'关底':'开始'}</text>`:'');
+    return `<g class="node ${st} ${boss?'boss':''}" data-n="${n}" transform=""><circle cx="${x}" cy="${y}" r="22"/><text x="${x}" y="${y+6}" class="${boss?'em':''}">${boss?'🏰':n}</text>${label}</g>`;
   }).join('');
-  $('#subjects').querySelectorAll('.subj').forEach(b=>b.onclick=()=>startSession(b.dataset.s));
-  $('#home-note').innerHTML = S.sessions===0
-    ? '<b>怎么玩：</b>每天一关，十几道题，大约 6 分钟。答对的知识点会一级级变成<b>金色</b>；答错也没关系，它明天会再来找你，多见几次就记住了。新知识点出现前会先给你讲一讲。'
-    : `第 1、2 单元共 <b>${KPS.length}</b> 个知识点。<b>${c.boxes[4]}</b> 个已经是金色，<b>${c.boxes[2]+c.boxes[3]}</b> 个在路上。`;
+  svg.querySelectorAll('.node.cur').forEach(g=>g.onclick=()=>startSession(S.subj||null));
+  svg.querySelectorAll('.node.done').forEach(g=>g.onclick=()=>toast(`第 ${g.dataset.n} 关 ${'★'.repeat(lv[g.dataset.n-1].s)}`));
+  $('#subjpick').innerHTML = `<span>练什么：</span>`+[['',"全部"],['yw','语文'],['sx','数学'],['yy','英语']].map(([v,l])=>`<button class="${v} ${(S.subj||'')===v?'on':''}" data-s="${v}">${l}</button>`).join('')+`<button class="btn sm" style="margin-left:auto" id="btn-start">${cur%5===0?'🏰 关底':'第 '+cur+' 关'} ▸</button>`;
+  $('#subjpick').querySelectorAll('button[data-s]').forEach(b=>b.onclick=()=>{ S.subj=b.dataset.s||null; save(); renderHome(); });
+  $('#btn-start').onclick=()=>startSession(S.subj||null);
+}
+/* ---------- 撒花 ---------- */
+function confetti(level){
+  const cv=$('#confetti'); if(!cv||REDUCED) return; const ctx=cv.getContext('2d'); cv.hidden=false;
+  cv.width=innerWidth; cv.height=innerHeight;
+  const N= level===3?140 : level===2?70 : 30; const cols=['#EDB21A','#C8412B','#2C5DA6','#25845F','#F1BE3A','#E8705A'];
+  const ps=[...Array(N)].map(()=>({x:cv.width/2+(Math.random()-.5)*120,y:cv.height*0.35,vx:(Math.random()-.5)*14,vy:-Math.random()*12-4,r:4+Math.random()*5,c:cols[rnd(cols.length)],a:Math.random()*6.28,s:(Math.random()-.5)*.3}));
+  const t0=performance.now();
+  const step=(t)=>{ const k=(t-t0)/1600; ctx.clearRect(0,0,cv.width,cv.height);
+    ps.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=.35; p.vx*=.99; p.a+=p.s; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.globalAlpha=Math.max(0,1-k); ctx.fillStyle=p.c; ctx.fillRect(-p.r,-p.r/2,p.r*2,p.r); ctx.restore(); });
+    if(k<1) requestAnimationFrame(step); else { ctx.clearRect(0,0,cv.width,cv.height); cv.hidden=true; } };
+  requestAnimationFrame(step);
 }
 
 /* ---------- 地图 ---------- */
@@ -2175,7 +2264,7 @@ function renderParent(){
       <div class="st"><b>${c.boxes[2]+c.boxes[3]}</b><span>铜、银</span></div>
       <div class="st"><b>${todayD.n}</b><span>今天做题 · 对 ${todayD.ok}</span></div>
     </div>
-    <div class="sec"><h3>最近 14 天每天做题数 <span class="muted">连续 ${S.streak} 天</span></h3><div class="hist">${days.map(d=>`<i class="${d.n?'':'z'}" style="height:${Math.max(4,d.n/mx*100)}%" title="${d.n}"></i>`).join('')}</div></div>
+    <div class="sec"><h3>最近 14 天每天做题数 <span class="muted">连续 ${S.streak} 天 · 最长 ${S.best||S.streak} 天 · 已过 ${(S.levels||[]).length} 关</span></h3><div class="hist">${days.map(d=>`<i class="${d.n?'':'z'}" style="height:${Math.max(4,d.n/mx*100)}%" title="${d.n}"></i>`).join('')}</div></div>
     <div class="sec"><h3>反复错的知识点 <span class="muted">周日复盘拿这几条讲</span></h3>
       ${weak.length?`<table><thead><tr><th>知识点</th><th>科目</th><th class="n">错</th><th class="n">对</th><th>等级</th></tr></thead><tbody>${weak.map(x=>`<tr><td>${esc(x.k.name)}</td><td>${SUBJ[x.k.s].name}</td><td class="n">${x.r.ng}</td><td class="n">${x.r.ok}</td><td>${BOXNAME[x.r.box]}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">还没有反复错的知识点。</p>'}
     </div>
@@ -2194,7 +2283,7 @@ function renderParent(){
       <p class="muted" style="margin-bottom:8px">进度存在这台设备的浏览器里。换设备时，把下面这段复制过去，粘贴后点「恢复」。</p>
       <textarea id="dump" readonly>${esc(JSON.stringify(S))}</textarea>
       <div class="row-btns" style="margin-top:8px"><button class="tiny" id="copy">复制备份</button><button class="tiny" id="restore">从粘贴板恢复</button><button class="tiny danger" id="reset">清空全部进度</button></div>
-      <p class="muted" style="margin-top:10px">题库：第 1、2 单元，语文 ${counts('yw').total} · 数学 ${counts('sx').total} · 英语 ${counts('yy').total} 个知识点。复习间隔 1 / 3 / 7 / 14 天，答错降一级、次日再出。</p>
+      <p class="muted" style="margin-top:10px">进这一页：长按首页标题 0.8 秒。题库：第 1、2 单元，语文 ${counts('yw').total} · 数学 ${counts('sx').total} · 英语 ${counts('yy').total} 个知识点。复习间隔 1 / 3 / 7 / 14 天，答错降一级、次日再出。</p>
     </div>`;
   $('#zoomseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{ S.zoomLevel=+b.dataset.z; save(); applyZoom(); renderParent(); });
   $('#autoread').onchange=e=>{ S.autoRead=e.target.checked; save(); toast(S.autoRead?'会自动朗读':'只在点 🔊 时朗读'); };
@@ -2207,7 +2296,9 @@ function renderParent(){
 function applyZoom(){ const auto = innerWidth>=1000?1.4 : innerWidth>=740?1.25 : 1; document.documentElement.style.setProperty('--z', (auto*(S.zoomLevel||1)).toFixed(2)); }
 load(); applyZoom(); addEventListener('resize', applyZoom);
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>show(b.dataset.go));
-$('#btn-start').onclick=()=>startSession(null);
+/* 家长页藏在标题后面：长按 0.8 秒 */
+(()=>{ const el=$('#apptitle'); let tm=null; const st=e=>{ tm=setTimeout(()=>{ tm=null; show('parent'); toast('家长看板'); },800); }; const en=()=>{ if(tm){ clearTimeout(tm); tm=null; } };
+  el.addEventListener('pointerdown',st); el.addEventListener('pointerup',en); el.addEventListener('pointercancel',en); el.addEventListener('pointerleave',en); el.style.userSelect='none'; })();
 $('#btn-quit').onclick=()=>{ if(Q && Q.i>0 && !confirm('这一关还没打完，先退出吗？已经答过的题都记下了。')) return; show('home'); };
 $('#sheet').addEventListener('click',e=>{ if(e.target===$('#sheet')) closeSheet(); });
 show('home');
