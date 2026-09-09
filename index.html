@@ -286,6 +286,29 @@ textarea{width:100%;min-height:90px;font:12px/1.4 ui-monospace,monospace;border:
 .tag .spk.tiny-say{border-color:var(--ink3);color:var(--ink2)}
 .switch{display:flex;align-items:center;gap:10px;font-size:15px}
 .switch input{width:22px;height:22px;accent-color:var(--yy)}
+/* ---------- 讲解连环画 ---------- */
+.pv{text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;padding:6px 0;min-height:200px;justify-content:center;touch-action:pan-y}
+.pv-emoji{font-size:62px;line-height:1.15;letter-spacing:.04em}
+.pv-title{font-size:24px;font-weight:700;line-height:1.35;text-wrap:balance}
+.pv-title .en{font-size:34px}
+.pv-sub{font-size:16px;color:var(--ink2);line-height:1.6;max-width:36ch}
+.pv-demo{width:100%;display:flex;justify-content:center}
+.pv-nav{display:flex;align-items:center;justify-content:center;gap:12px}
+.pv-arrow{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);font-size:13px;color:var(--ink2)}
+.pv-arrow[disabled]{opacity:.25}
+.pv-dots{display:flex;gap:6px} .pv-dots i{width:9px;height:9px;border-radius:50%;background:var(--line);display:block;transition:transform .15s} .pv-dots i.on{background:var(--ink);transform:scale(1.3)} .pv-dots i.done{background:var(--ink3)}
+.chips-wrap{display:flex;flex-direction:column;gap:8px;align-items:center;width:100%}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip-btn{min-height:42px;padding:6px 14px;border:2px solid var(--line);border-radius:21px;background:var(--card);font-size:17px;font-weight:600;line-height:1.3}
+.chip-btn:active{transform:translateY(1px)}
+.chip-btn.on{border-color:var(--ink);background:var(--sunk)}
+.chip-btn mark{background:var(--b4-bg);color:var(--yw);padding:0 1px;border-radius:2px}
+.flipcap{min-height:1.6em;font-size:15px;color:var(--ink3)}
+.flipcap.on{color:var(--ink);font-weight:600}
+details.more{border-top:1px dashed var(--line);padding-top:8px}
+details.more summary{cursor:pointer;color:var(--ink3);font-size:14px;list-style:none}
+details.more summary::before{content:'▸ '} details.more[open] summary::before{content:'▾ '}
+details.more p{margin:8px 0;font-size:15px;color:var(--ink2);line-height:1.7}
 </style>
 </head>
 <body>
@@ -1497,17 +1520,54 @@ function nextQ(){
 }
 function renderLesson(k, go){
   const c=$('#qcard');
-  c.innerHTML = `
-    <div class="tag"><span class="pill ${k.s}">${SUBJ[k.s].name}</span>新知识点 · 第 ${k.u} 单元</div>
-    <h2 style="font-size:26px">${esc(k.name)}</h2>
-    <p style="font-size:18px;line-height:1.7;color:var(--ink2)">${esc(k.lesson)}</p>
-    ${k.lessonHtml?`<div class="lfig">${k.lessonHtml}</div>`:''}
-    <div class="row-btns">${spkBtn(k.lesson,'听讲解','')}${k.word?`<button class="spk" id="spk">🔊 听一听 <span class="en">${esc(k.word.en)}</span></button>`:''}</div>
-    <div class="acts"><button class="btn big" id="go">明白了，出题 ▸</button></div>`;
-  const sp=$('#spk'); if(sp){ sp.onclick=()=>say(k.word.en,'en'); }
-  bindSay(c);
-  if(S.autoRead!==false) setTimeout(()=>{ if(k.word) sayMixed(k.lesson+' '+k.word.en); else sayMixed(k.lesson); },350);
-  $('#go').onclick=go; mount3d(c);
+  if(!k.panels){
+    c.innerHTML = `
+      <div class="tag"><span class="pill ${k.s}">${SUBJ[k.s].name}</span>新知识点 · 第 ${k.u} 单元</div>
+      <h2 style="font-size:26px">${esc(k.name)}</h2>
+      <p style="font-size:18px;line-height:1.7;color:var(--ink2)">${esc(k.lesson)}</p>
+      ${k.lessonHtml?`<div class="lfig">${k.lessonHtml}</div>`:''}
+      <div class="row-btns">${spkBtn(k.lesson,'听讲解','')}</div>
+      <div class="acts"><button class="btn big" id="go">明白了，出题 ▸</button></div>`;
+    bindSay(c); if(S.autoRead!==false) setTimeout(()=>sayMixed(k.lesson),350);
+    $('#go').onclick=go; mount3d(c); return;
+  }
+  Q.p=0;
+  const draw=()=>{
+    const ps=k.panels, p=ps[Q.p], last=Q.p===ps.length-1;
+    const sayTxt = p.say || toSpeech(p.t+'。'+(p.s||''));
+    c.innerHTML = `
+      <div class="tag"><span class="pill ${k.s}">${SUBJ[k.s].name}</span>新知识点 · ${esc(k.name)}</div>
+      <div class="pv" id="pv">
+        <div class="pv-emoji">${p.e||''}</div>
+        <div class="pv-title">${p.t}</div>
+        ${p.s?`<div class="pv-sub">${p.s}</div>`:''}
+        ${p.d?`<div class="pv-demo">${p.d}</div>`:''}
+      </div>
+      <div class="pv-nav">
+        <button class="pv-arrow" id="pv-prev" ${Q.p?'':'disabled'} aria-label="上一格">◀</button>
+        <div class="pv-dots">${ps.map((_,i)=>`<i class="${i===Q.p?'on':i<Q.p?'done':''}"></i>`).join('')}</div>
+        <button class="spk tiny-say" data-say="${esc(sayTxt)}">🔊 再听</button>
+        <button class="pv-arrow" id="pv-next" ${last?'disabled':''} aria-label="下一格">▶</button>
+      </div>
+      <div class="acts">${last?`<button class="btn big" id="go">明白了，出题 ▸</button>`:`<button class="btn big" id="pv-go">下一格 ▸</button>`}</div>
+      <details class="more"><summary>多说几句</summary><p>${esc(k.lesson)}</p>${k.lessonHtml?`<div class="lfig">${k.lessonHtml}</div>`:''}</details>`;
+    mount3d(c); bindSay(c); bindDemo(c);
+    const nxt=()=>{ if(Q.p<ps.length-1){ Q.p++; draw(); } }, prv=()=>{ if(Q.p>0){ Q.p--; draw(); } };
+    $('#pv-prev').onclick=prv; $('#pv-next').onclick=nxt;
+    if(last) $('#go').onclick=go; else $('#pv-go').onclick=nxt;
+    // 左右滑动翻页
+    const pv=$('#pv'); let x0=null;
+    pv.addEventListener('pointerdown',e=>{ if(e.target.closest('.s3d,button,input')) return; x0=e.clientX; });
+    pv.addEventListener('pointerup',e=>{ if(x0===null) return; const dx=e.clientX-x0; x0=null; if(dx<-40) nxt(); else if(dx>40) prv(); });
+    if(S.autoRead!==false) setTimeout(()=>sayMixed(sayTxt),300);
+  };
+  draw();
+}
+function bindDemo(root){
+  (root||document).querySelectorAll('[data-flip]').forEach(b=>{ if(b._flip) return; b._flip=1;
+    b.addEventListener('click',()=>{ const w=b.closest('.chips-wrap'); if(!w) return;
+      w.querySelectorAll('.chip-btn').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+      const cap=w.querySelector('.flipcap'); if(cap){ cap.innerHTML=b.dataset.flip; cap.classList.add('on'); } }); });
 }
 function lessonSheet(k){
   openSheet(`<h2>${esc(k.name)}</h2><p style="font-size:17px;line-height:1.7;color:var(--ink2)">${esc(k.lesson)}</p>${k.lessonHtml?`<div class="lfig">${k.lessonHtml}</div>`:''}<div class="acts" style="margin-top:14px">${spkBtn(k.lesson,'听讲解','')}<button class="btn sm" onclick="closeSheet()">知道了</button></div>`); mount3d($('#sheet')); bindSay($('#sheet'));
@@ -1664,6 +1724,313 @@ function finish(){
   show('done');
   if(r===n) sndUp();
 }
+/* ================= 讲解连环画 =================
+   每个知识点 3～5 格：{e:大图标, t:一句话, s:补一句, d:能点的东西, say:朗读文本(可省)}
+   ch(标签, 朗读, 翻出来的意思) 生成一个可点的小块；chips([...]) 排成一组，下面有一行显示翻出来的意思
+   ============================================== */
+const ch=(label,say,flip)=>`<button class="chip-btn" data-say="${esc(say||label)}" ${flip?`data-flip="${esc(flip)}"`:''}>${label}</button>`;
+const chips=(list,cap)=>`<div class="chips-wrap"><div class="chips">${list.join('')}</div><div class="flipcap">${cap||'点一个试试'}</div></div>`;
+const PANELS={};
+
+/* ---------------- 语文 ---------------- */
+PANELS['yw1-jia']=[
+ {e:'🎭',t:'「假」会变声',s:'同一个字，两个读音，看它在干什么'},
+ {e:'🏖️',t:'放假，读 jià',s:'休息的日子，声音往下一落',d:chips([ch('放假','放假 jià','休息的日子，第四声'),ch('暑假','暑假 jià','夏天的假期，第四声'),ch('请假','请假 jià','不上学要休息，第四声')])},
+ {e:'🎃',t:'真假，读 jiǎ',s:'不是真的，第三声',d:chips([ch('真假','真假 jiǎ','真的还是假的，第三声'),ch('假话','假话 jiǎ','不真的话，第三声'),ch('假装','假装 jiǎ','装出来的，第三声')])},
+ {e:'💡',t:'一句话记住',s:'休息就 jià，不真就 jiǎ'},
+];
+PANELS['yw1-syn']=[
+ {e:'👯',t:'近义词是意思差不多的一对',s:'换着说，别人一样听得懂'},
+ {e:'🌳',t:'粗壮的树干 = 粗大的树干',s:'点一点，听听哪对是朋友',d:chips([ch('许多','许多，众多','许多 = 众多'),ch('粗壮','粗壮，粗大','粗壮 = 粗大'),ch('敬爱','敬爱，爱戴','敬爱 = 爱戴'),ch('好奇','好奇，新奇','好奇 = 新奇'),ch('招引','招引，吸引','招引 = 吸引'),ch('安静','安静，平静','安静 = 平静')])},
+ {e:'🔍',t:'做题的窍门',s:'先想这个词是什么意思，再找意思最接近的'},
+];
+PANELS['yw1-ant']=[
+ {e:'🌗',t:'反义词是正好相反的一对',s:'像白天和黑夜'},
+ {e:'🎪',t:'热闹 ↔ 冷清',s:'点一点，看它翻个个儿',d:chips([ch('许多','许多，些许','许多 ↔ 些许'),ch('热闹','热闹，冷清','热闹 ↔ 冷清'),ch('古老','古老，年轻','古老 ↔ 年轻'),ch('洁白','洁白，乌黑','洁白 ↔ 乌黑'),ch('安静','安静，喧闹','安静 ↔ 喧闹'),ch('粗壮','粗壮，纤细','粗壮 ↔ 纤细')])},
+ {e:'🖼️',t:'窍门：先在脑子里放一幅画',s:'「热闹」是很多人在说话，翻过来就是没人，「冷清」'},
+];
+PANELS['yw1-cy']=[
+ {e:'🕵️',t:'这些成语里都藏着身体',s:'头、手、脚、口、心……先把它找出来'},
+ {e:'🙆',t:'点一个，看它在做什么动作',d:chips([ch('摇<mark>头</mark>晃<mark>脑</mark>','摇头晃脑','头在摇，脑袋在晃，读书读得很得意'),ch('披<mark>头</mark>散<mark>发</mark>','披头散发','头发散着没梳'),ch('张<mark>牙</mark>舞<mark>爪</mark>','张牙舞爪','露着牙、挥着爪，凶巴巴'),ch('提<mark>心</mark>吊<mark>胆</mark>','提心吊胆','心提着、胆吊着，很害怕'),ch('<mark>面</mark>红<mark>耳</mark>赤','面红耳赤','脸红了，耳朵也红了'),ch('<mark>手</mark>忙<mark>脚</mark>乱','手忙脚乱','手和脚都乱了，很慌')])},
+ {e:'💪',t:'还有这些',d:chips([ch('<mark>手</mark>疾<mark>眼</mark>快','手疾眼快','手快眼睛也快'),ch('<mark>口</mark>干<mark>舌</mark>燥','口干舌燥','嘴巴舌头都干了，好渴'),ch('昂<mark>首</mark>挺<mark>胸</mark>','昂首挺胸','抬头挺胸，很神气'),ch('神采飞扬','神采飞扬','眼睛亮亮的，精神好'),ch('铜墙铁<mark>壁</mark>','铜墙铁壁','铜的墙铁的壁，特别结实'),ch('鸦雀无声','鸦雀无声','乌鸦麻雀都不出声，安静极了')])},
+ {e:'💡',t:'先找身体，再想动作',s:'意思就出来了'},
+];
+PANELS['yw1-nr']=[
+ {e:'🌳🐦🦋',t:'拟人，就是让东西像人一样',s:'风会唱歌，花会点头'},
+ {e:'📖',t:'课文里这句话',s:'树枝不摇了，鸟儿不叫了，蝴蝶停在花上，好像都在听同学们读课文',d:chips([ch('🌳 树枝','我不摇了，我在听你们读课文呢'),ch('🐦 鸟儿','我不叫了，我也在听'),ch('🦋 蝴蝶','我停在花上，你们读得真好听')],'点一点，让它们开口说话')},
+ {e:'🔍',t:'怎么认出拟人句',s:'看那个东西做的事，是不是只有人才会做。鸟儿会「听课」？那就是拟人'},
+ {e:'✨',t:'为什么这样写',s:'连鸟儿都停下来听，说明读书声真好听、窗外真安静'},
+];
+PANELS['yw1-pb']=[
+ {e:'🥁',t:'排比，像鼓点一样一下一下',s:'同样的句式连着说三次或更多'},
+ {e:'🐦👩‍🏫🚩',t:'向小鸟打招呼，向老师问好，向国旗敬礼',s:'点一点，数一数「向」出现了几次',d:chips([ch('向小鸟打招呼','向小鸟打招呼','第一个「向」'),ch('向老师问好','向老师问好','第二个「向」'),ch('向国旗敬礼','向国旗敬礼','第三个「向」，三个了，这就是排比')])},
+ {e:'3️⃣',t:'至少要三个',s:'两个只是并列，三个以上才叫排比'},
+];
+PANELS['yw1-sj']=[
+ {e:'🐂🎵',t:'一个放牛娃骑在牛背上唱歌',s:'袁枚看见了，写下《所见》',d:chips([ch('牧童骑黄牛','牧童骑黄牛','放牛的孩子骑着黄牛'),ch('歌声振林樾','歌声振林樾','歌声在树林里震响')])},
+ {e:'🦗🤫',t:'忽然，他想抓树上的知了',s:'马上闭嘴，一动不动站住了',d:chips([ch('意欲捕鸣蝉','意欲捕鸣蝉','想去抓正在叫的知了'),ch('忽然闭口立','忽然闭口立','立刻闭上嘴站住，怕吓跑它')])},
+ {e:'🎬',t:'从大声唱到一下不出声',s:'这个转折就是这首诗最可爱的地方'},
+ {e:'✍️',t:'清朝 · 袁枚',s:'「所见」就是「看到的」'},
+];
+PANELS['yw1-xz']=[
+ {e:'🕵️',t:'写一个同学，不写名字，让大家猜',s:'猜得出来才算写得好'},
+ {e:'👀',t:'写他和别人不一样的地方',s:'长什么样、常做什么表情、爱干什么、脾气怎样',d:chips([ch('外貌','外貌','他的头发、眼睛、个子'),ch('神态','神态','他笑起来、生气时的样子'),ch('爱好','爱好','他下课总在干什么'),ch('性格','性格','他是急脾气还是慢性子')])},
+ {e:'📸',t:'课间、值日、体育课多看几眼',s:'把画面记在脑子里，写的时候就有了'},
+];
+PANELS['yw2-mo']=[
+ {e:'🔪',t:'磨 mó：在磨',s:'一个动作，第二声',d:chips([ch('磨刀','磨刀 mó','把刀磨快'),ch('打磨','打磨 mó','磨光滑'),ch('磨蹭','磨蹭 mó','慢吞吞')])},
+ {e:'🏠',t:'磨 mò：那个磨',s:'一个东西，第四声',d:chips([ch('磨坊','磨坊 mò','磨面粉的房子'),ch('石磨','石磨 mò','石头做的磨')])},
+ {e:'💡',t:'动作 mó，东西 mò'},
+];
+PANELS['yw2-tiao']=[
+ {e:'🍎',t:'挑 tiāo：选',s:'也可以是用肩膀担，第一声',d:chips([ch('挑选','挑选 tiāo','选一选'),ch('挑水','挑水 tiāo','用扁担担水'),ch('挑食','挑食 tiāo','挑着吃')])},
+ {e:'⚔️',t:'挑 tiǎo：挑起来',s:'把事情引起来，第三声',d:chips([ch('挑战','挑战 tiǎo','把战斗挑起来'),ch('挑起','挑起 tiǎo','用棍子挑起来')])},
+ {e:'💡',t:'选东西 tiāo，挑起来 tiǎo'},
+];
+PANELS['yw2-syn']=[
+ {e:'👯',t:'这一课的近义词，很多只换了一个字',s:'叮咛和叮嘱、道别和告别'},
+ {e:'🔤',t:'点一点，找那个一样的字',d:chips([ch('明朗','明朗，明亮','明朗 = 明亮'),ch('排列','排列，摆放','排列 = 摆放'),ch('凌乱','凌乱，杂乱','凌乱 = 杂乱'),ch('留意','留意，留神','留意 = 留神'),ch('凉爽','凉爽，清凉','凉爽 = 清凉'),ch('香甜','香甜，甘甜','香甜 = 甘甜')])},
+ {e:'🔤',t:'还有这些',d:chips([ch('叮咛','叮咛，叮嘱','叮咛 = 叮嘱'),ch('道别','道别，告别','道别 = 告别'),ch('透明','透明，透亮','透明 = 透亮'),ch('掠过','掠过，拂过','掠过 = 拂过'),ch('辽阔','辽阔，广阔','辽阔 = 广阔'),ch('饱满','饱满，丰满','饱满 = 丰满')])},
+];
+PANELS['yw2-ant']=[
+ {e:'🌧️☀️',t:'潮湿的地面，翻过来就是晒干的地面',s:'反义词就是把画面翻个个儿'},
+ {e:'🔄',t:'点一点，看它翻过来',d:chips([ch('明朗','明朗，阴暗','明朗 ↔ 阴暗'),ch('潮湿','潮湿，干燥','潮湿 ↔ 干燥'),ch('仔细','仔细，马虎','仔细 ↔ 马虎'),ch('温柔','温柔，粗暴','温柔 ↔ 粗暴'),ch('打开','打开，关闭','打开 ↔ 关闭'),ch('凉爽','凉爽，闷热','凉爽 ↔ 闷热'),ch('辽阔','辽阔，狭小','辽阔 ↔ 狭小'),ch('饱满','饱满，干瘪','饱满 ↔ 干瘪')])},
+ {e:'🫘',t:'饱满是鼓鼓的豆子',s:'翻过来就是瘪掉的豆子，干瘪'},
+];
+PANELS['yw2-sj']=[
+ {e:'🌸',t:'春天：找「春、花、柳」',d:chips([ch('春光明媚','春光明媚','春天的阳光又亮又美'),ch('春暖花开','春暖花开','天暖了，花开了'),ch('桃红柳绿','桃红柳绿','桃花红，柳树绿'),ch('鸟语花香','鸟语花香','鸟在唱，花在香')])},
+ {e:'☀️',t:'夏天：找「烈日、炎、骄阳、荫」',d:chips([ch('烈日当空','烈日当空','大太阳挂在头顶'),ch('炎炎夏日','炎炎夏日','热得发烫的夏天'),ch('骄阳似火','骄阳似火','太阳像火'),ch('绿树成荫','绿树成荫','树叶密得能遮太阳')])},
+ {e:'🍂',t:'秋天：找「秋、云、瓜果」',d:chips([ch('天高云淡','天高云淡','天很高，云很淡'),ch('秋高气爽','秋高气爽','天高高的，空气爽爽的'),ch('秋风习习','秋风习习','秋风轻轻吹'),ch('瓜果飘香','瓜果飘香','瓜果熟了，到处是香味')])},
+ {e:'❄️',t:'冬天：找「寒、冰、雪、冻」',d:chips([ch('天寒地冻','天寒地冻','天冷，地都冻住了'),ch('冰天雪地','冰天雪地','到处是冰和雪'),ch('寒冬腊月','寒冬腊月','一年最冷的腊月'),ch('滴水成冰','滴水成冰','水一滴下来就冻住')])},
+];
+PANELS['yw2-abb']=[
+ {e:'✨',t:'ABB：一个字加两个一样的字',s:'亮·晶晶，绿·油油'},
+ {e:'🎨',t:'后面两个字是在「加料」',s:'绿油油比绿更绿，湿漉漉比湿更湿',d:chips([ch('亮晶晶','亮晶晶','亮得闪闪的'),ch('湿漉漉','湿漉漉','像刚从水里捞出来'),ch('油亮亮','油亮亮','亮得像抹了油'),ch('绿油油','绿油油','绿得发亮'),ch('红通通','红通通','红得透亮'),ch('白花花','白花花','白得晃眼')])},
+ {e:'🚫',t:'明明白白不是 ABB',s:'那是 AABB，两个一样加两个一样'},
+];
+PANELS['yw2-dt']=[
+ {e:'🌕🏞️',t:'远远地看洞庭湖',s:'月光下，湖面又平又亮',d:chips([ch('遥望洞庭山水翠','遥望洞庭山水翠','远远望去，湖水和山都是翠绿的')])},
+ {e:'🍽️🐚',t:'湖面像一个白银大盘子',s:'湖中间的君山像盘子里一颗青青的田螺',d:chips([ch('白银盘里一青螺','白银盘里一青螺','银盘 = 湖面，青螺 = 君山')])},
+ {e:'📏',t:'一个大盘子，一颗小田螺',s:'湖有多大、山有多小，一下子就看见了'},
+];
+PANELS['yw2-sx']=[
+ {e:'🍁🛑',t:'诗人杜牧把车停下来了',s:'因为太喜欢傍晚的枫林',d:chips([ch('停车坐爱枫林晚','停车坐爱枫林晚','停车，是因为喜爱傍晚的枫林')])},
+ {e:'⚠️',t:'「坐」不是坐下！',s:'这里的坐，是「因为」',d:chips([ch('坐 = 因为','坐，因为','停车坐爱：因为喜爱，所以停车')])},
+ {e:'🍁🌸',t:'霜叶比二月的花还要红',s:'「红于」就是「比……更红」',d:chips([ch('霜叶红于二月花','霜叶红于二月花','被霜打过的枫叶，比春天的花还红')])},
+];
+PANELS['yw2-zy']=[
+ {e:'🌑🛶',t:'天很黑，船上的人只看见一盏渔灯',s:'像一点萤火虫的光',d:chips([ch('月黑见渔灯','月黑见渔灯','没有月亮，只看见渔船的灯'),ch('孤光一点萤','孤光一点萤','孤零零的一点光，像萤火虫')])},
+ {e:'🌬️✨',t:'风一吹，那一点光碎成满河的星星',d:chips([ch('微微风簇浪','微微风簇浪','小风吹起小浪'),ch('散作满河星','散作满河星','光被打散，变成满河星星')])},
+ {e:'🎆',t:'从「一点」到「满河」',s:'这是全诗最好看的一笔'},
+ {e:'✍️',t:'清朝 · 查慎行',s:'「查」在这里读 zhā。舟夜书所见：夜里在船上写下看到的'},
+];
+PANELS['yw2-rj']=[
+ {e:'📔',t:'日记是写给以后的自己看的',s:'今天的事，记下来'},
+ {e:'📅',t:'第一行写三样',d:chips([ch('日期','日期','几月几日'),ch('星期','星期','星期几'),ch('天气','天气','晴、阴、雨')])},
+ {e:'👀👂💭',t:'看到的、听到的、想到的都能写',s:'不用惊天动地，秋天的一片叶子也行'},
+];
+
+/* ---------------- 数学 ---------------- */
+PANELS['sx1-jc']=[
+ {e:'🥤',t:'拿一个水杯放桌上',s:'站着往下看，杯口是圆的'},
+ {e:'🧎',t:'蹲下来平着看',s:'它变成了长方形'},
+ {e:'🔄',t:'这个圆柱是活的，你试试',d:solid3d('cylinder',{controls:['top','front','iso'],size:170})},
+ {e:'❓',t:'做题先问一句：我站在哪儿？'},
+];
+PANELS['sx1-st']=[
+ {e:'📸',t:'想象你给它们拍照',s:'站的地方不一样，照片就不一样'},
+ {e:'🟦',t:'正方体：从哪边拍都是正方形',d:solid3d('cube',{controls:['front','top','iso'],size:150})},
+ {e:'📦',t:'长方体：拍出来是长方形',d:solid3d('cuboid',{controls:['front','top','left','iso'],size:160})},
+ {e:'🥫',t:'圆柱：上面拍是圆，前面拍是长方形',s:'球最省事，怎么拍都是圆'},
+ {e:'⚠️',t:'拍到正方形，别急着说是正方体',s:'长方体也可能有一个面是正方形'},
+];
+PANELS['sx1-sz']=[
+ {e:'🎲',t:'家里有骰子的话，拿一个来',s:'看看朝上是几，翻过来数一数底下的'},
+ {e:'7️⃣',t:'对面加起来总是 7',s:'1 对 6，2 对 5，3 对 4',d:dice3d(1,2,3,{controls:['bottom','back','left','iso'],size:170})},
+ {e:'🧮',t:'看见一个面，就能算出背面',s:'上面 3，底下就是 7 − 3 = 4'},
+ {e:'⚠️',t:'只有骰子这么规定',s:'普通的正方体没有这个特点'},
+];
+PANELS['sx1-zh']=[
+ {e:'🧱',t:'这堆方块是活的',s:'先拖着转一转',d:cubes3d([[2,0,1],[1,1,0]],{controls:['front','top','left','iso'],size:170})},
+ {e:'👁️',t:'点「从前面看」',s:'它转到正前方，压扁成一张格子图。数有几列、每列几层'},
+ {e:'🛩️',t:'点「从上面看」',s:'只看底下的方块占了哪些格子'},
+ {e:'↩️',t:'点「从左面看」，有个小陷阱',s:'离你近的那一排，跑到了你的右手边'},
+ {e:'🙈',t:'被挡住的看不见',s:'看不见就不用画'},
+];
+PANELS['sx1-zk']=[
+ {e:'🧴',t:'找一个牙膏盒',s:'沿着棱剪开，摊平',d:solid3d('cuboid',{controls:['spin','iso'],size:150})},
+ {e:'6️⃣',t:'它有 6 个面',s:'正对着的两个面一模一样，而且永远不挨着'},
+ {e:'✂️',t:'至少要剪 7 条棱才能摊平',s:'剪法不同，摊出来的形状也不同',d:svgNetPlain([[1,0],[0,1],[1,1],[2,1],[3,1],[1,2]])},
+];
+PANELS['sx1-zf']=[
+ {e:'📄',t:'这张纸有六个格子',s:'拖滑块，或者点「折起来」',d:net3d(NETS[0],['A','B','C','D','E','F'],{controls:['fold'],size:190})},
+ {e:'🔍',t:'折好以后找找：A 的对面是谁？',s:'挨着的格子折起来是邻居，永远不是对面'},
+ {e:'↔️',t:'一排里隔一个的才是对面',s:'C 和 E 隔着 D，它们是对面'},
+ {e:'🚫',t:'口诀：田字格不能折',s:'一排最多四个'},
+];
+PANELS['sx1-tl']=[
+ {e:'🧱🧱',t:'这两堆搭得不一样',s:'分别点「从前面看」',d:`<div class="figrow">${cubes3d([[2,0],[1,1]],{controls:['front','iso'],size:130})}${cubes3d([[1,0],[2,1]],{controls:['front','iso'],size:130})}</div>`},
+ {e:'😲',t:'两张图一模一样！',s:'从前面只能看到每列多高，后面藏了几个看不出来'},
+ {e:'🧩',t:'所以一张图猜不出全貌',s:'多看几个方向，范围才会越来越小'},
+];
+PANELS['sx2-jb']=[
+ {e:'🥈',t:'加法、减法是一级运算'},
+ {e:'🥇',t:'乘法、除法是二级运算',s:'高一级'},
+ {e:'🚶‍♂️🚶‍♀️',t:'像排队：级别高的先上',s:'先算乘除，再算加减'},
+];
+PANELS['sx2-tj']=[
+ {e:'➕➖',t:'只有加减，或者只有乘除',s:'叫同级运算'},
+ {e:'👉',t:'规则最简单：从左往右',s:'一步一步算',d:work(['24 + 15 − 13','= 39 − 13','= 26'])},
+ {e:'📝',t:'写脱式：第一行抄题',s:'下面每行等号对齐，没算到的数原样抄'},
+];
+PANELS['sx2-lj']=[
+ {e:'⚠️',t:'既有乘除又有加减，不能从左往右硬算',s:'先算乘除，再算加减'},
+ {e:'🕳️',t:'28 − 6 × 3，谁先算 28 − 6 谁掉坑',s:'应该先算 6 × 3',d:work(['28 − 6 × 3','= 28 − 18','= 10'])},
+ {e:'✍️',t:'先算的那一步先变成数',s:'其他的原样抄下来'},
+];
+PANELS['sx2-kh']=[
+ {e:'🎫',t:'小括号是插队卡',s:'有它，就先算它里面的'},
+ {e:'👉',t:'5 × (4 + 2)：先算 4 + 2',d:work(['5 × (4 + 2)','= 5 × 6','= 30'])},
+ {e:'🔁',t:'反过来想',s:'要先算加减再算乘除，就得给加减加上括号，不然别人会先算乘除'},
+];
+PANELS['sx2-gf']=[
+ {e:'📏',t:'等号上下对齐'},
+ {e:'✍️',t:'没算的数和符号，原样抄下来'},
+ {e:'🪜',t:'一步一行，不跳步',d:work(['28 − 6 × 3','= 28 − 18','= 10'])},
+ {e:'❌',t:'三个最常见的错',s:'跳步、漏抄、等号歪掉'},
+];
+PANELS['sx2-jz']=[
+ {e:'💰',t:'你有 98 元',s:'先花 23，再花 17'},
+ {e:'🛒',t:'和一次花掉 40，剩的一样多',s:'连减两个数 = 减去它们的和',d:work(['98 − 23 − 17','= 98 − (23 + 17)','= 98 − 40','= 58'])},
+ {e:'➗',t:'连除也一样',s:'16 ÷ 2 ÷ 2 = 16 ÷ (2 × 2)'},
+ {e:'💡',t:'什么时候用？',s:'后面两个数凑成整十整百的时候最划算'},
+];
+PANELS['sx2-bz']=[
+ {e:'🕵️',t:'应用题就像破案，五步走',s:'我们用一道题从头跟到尾'},
+ {e:'📖',t:'第一步：读题',s:'果园摘了 105 个西瓜，运走 57 个，剩下的每 6 个装一筐，可以装几筐？',say:'第一步，读题。果园摘了105个西瓜，运走57个，剩下的每6个装一筐，可以装几筐？先把题读两遍，圈出数字。'},
+ {e:'🖍️',t:'第二步：画图',s:'整条是 105，运走的一段，剩下的一段',d:svgBar('摘了 105 个','运走 57 个','剩下 ? 个','每 6 个一筐 → ? 筐')},
+ {e:'🔗',t:'第三步：找关系',s:'要算装几筐，得先知道剩下几个。剩下的 = 105 − 57'},
+ {e:'✏️',t:'第四步：列式解答',d:work(['(105 − 57) ÷ 6','= 48 ÷ 6','= 8（筐）'])},
+ {e:'🔍',t:'第五步：检验',s:'8 筐 × 6 = 48，48 + 57 = 105，和题目对上了。最容易漏的就是这一步'},
+];
+PANELS['sx2-ff']=[
+ {e:'🚶',t:'综合法：从条件出发，往前走',s:'知道 105 和 57，先算剩下 48，再算 48 ÷ 6'},
+ {e:'🎯',t:'分析法：从问题出发，往回想',s:'要算装几筐？得知道剩下几个。剩下几个？105 − 57'},
+ {e:'🖍️',t:'画图法：画线段图',s:'看得见就想得清',d:svgBar('摘了 105 个','运走 57 个','剩下 ? 个','每 6 个一筐 → ? 筐')},
+];
+PANELS['sx2-yy']=[
+ {e:'🔑',t:'两步题的关键：找中间量',s:'题目没直接问、但不算出来就走不下去的那个数'},
+ {e:'🖍️',t:'画一条线段图',s:'整条是总数，分两段，一眼看出缺哪一段',d:svgBar('摘了 105 个','运走 57 个','剩下 ? 个','每 6 个一筐 → ? 筐')},
+ {e:'✏️',t:'先算减法，减法要加括号',d:work(['(105 − 57) ÷ 6','= 48 ÷ 6','= 8（筐）'])},
+ {e:'🔍',t:'算完把答案带回去检验',s:'8 × 6 = 48，48 + 57 = 105 ✓'},
+];
+
+/* ---------------- 英语 ---------------- */
+PANELS['yy1-abc']=[
+ {e:'🔤',t:'26 个字母，每个都有大写和小写',s:'顺序要背熟'},
+ {e:'🎵',t:'唱字母歌最快',d:chips([ch('A B C D E F G','A, B, C, D, E, F, G'),ch('H I J K L M N','H, I, J, K, L, M, N'),ch('O P Q','O, P, Q'),ch('R S T','R, S, T'),ch('U V W','U, V, W'),ch('X Y Z','X, Y, Z')],'点一句，听一句')},
+ {e:'👀',t:'长得像的要小心',s:'b 和 d，p 和 q，方向不一样'},
+];
+PANELS['yy1-heshe']=[
+ {e:'👦',t:'他，用 he',d:chips([ch('He is Sam.','He is Sam.','他是萨姆'),ch('He is nine.','He is nine.','他九岁')])},
+ {e:'👧',t:'她，用 she',d:chips([ch('She is Amy.','She is Amy.','她是埃米'),ch('She is nine, too.','She is nine, too.','她也九岁')])},
+ {e:'💡',t:'she 比 he 多一个 s',s:'s 是 sister 的 s，所以 she 是女的'},
+];
+PANELS['yy1-be']=[
+ {e:'🙋',t:'我用 am',d:chips([ch('I am Sam.','I am Sam.','我是萨姆')])},
+ {e:'👉',t:'你用 are',d:chips([ch('You are my friend.','You are my friend.','你是我的朋友')])},
+ {e:'👦👧🐱',t:'他、她、它用 is',d:chips([ch('He is Daming.','He is Daming.','他是大明'),ch('She is nine.','She is nine.','她九岁'),ch('It is a book.','It is a book.','它是一本书')])},
+ {e:'👨‍👩‍👧',t:'两个以上，全用 are',d:chips([ch('We are twins.','We are twins.','我们是双胞胎'),ch('They are from the UK.','They are from the UK.','他们来自英国')])},
+ {e:'🎶',t:'口诀念三遍',s:'我用 am，你用 are，is 跟着他她它，复数全用 are',say:'我用 am，你用 are，is 跟着他、她、它，复数全用 are'},
+];
+PANELS['yy1-short']=[
+ {e:'🤏',t:'两个词挤成一个',s:"那个小撇号，表示这里少了一个字母"},
+ {e:'🔗',t:'点一点，看它们怎么挤',d:chips([ch("I am → I'm","I am, I'm","I'm = I am"),ch("He is → He's","He is, He's","He's = He is"),ch("She is → She's","She is, She's","She's = She is"),ch("We are → We're","We are, We're","We're = We are"),ch("They are → They're","They are, They're","They're = They are")])},
+];
+PANELS['yy1-name']=[
+ {e:'🪪',t:'中文名字写成英文：直接用拼音',s:'不加声调，姓在前，名在后，中间空一格'},
+ {e:'✍️',t:'名字两个字要连写',d:chips([ch('李明 → Li Ming','Li Ming','姓和名各自大写开头，中间空格'),ch('王小红 → Wang Xiaohong','Wang Xiaohong','小红连写，只有 X 大写')])},
+ {e:'🗺️',t:'地名更简单：连写，第一个字母大写',d:chips([ch('北京 → Beijing','Beijing','不空格'),ch('山东 → Shandong','Shandong','不空格'),ch('四川 → Sichuan','Sichuan','不空格')])},
+];
+PANELS['yy1-hi']=[
+ {e:'👋',t:'hi：跟朋友打招呼，随便一点',d:chips([ch('Hi, Tom!','Hi, Tom!','嗨，汤姆')])},
+ {e:'🙋',t:'hello：什么场合都行',s:'见老师、见客人也可以',d:chips([ch('Hello, everyone!','Hello, everyone!','大家好')])},
+ {e:'🤝',t:'第一次见面说',d:chips([ch('Nice to meet you.','Nice to meet you.','很高兴见到你')])},
+];
+PANELS['yy1-intro']=[
+ {e:'🗣️',t:'介绍一个人，三句话就够',s:'叫什么、几岁、来自哪儿'},
+ {e:'🙋',t:'介绍自己',d:chips([ch("I'm Sam.","I'm Sam.",'我是萨姆'),ch("I'm nine.","I'm nine.",'我九岁'),ch("I'm from the UK.","I'm from the UK.",'我来自英国')])},
+ {e:'👧',t:'介绍别人，换成 He\'s 或 She\'s',d:chips([ch('This is Amy.','This is Amy.','这是埃米'),ch("She's nine.","She's nine.",'她九岁'),ch("She's from the UK.","She's from the UK.",'她来自英国')])},
+];
+PANELS['yy1-write']=[
+ {e:'📝',t:'写《我的朋友》，套一个模板'},
+ {e:'1️⃣',t:'先打招呼，再介绍自己',d:chips([ch('Hello, everyone!','Hello, everyone!','大家好'),ch("I'm Tom. I'm nine. I'm from Beijing.","I'm Tom. I'm nine. I'm from Beijing.",'我是汤姆，九岁，来自北京')])},
+ {e:'2️⃣',t:'介绍朋友',d:chips([ch("This is Daming. He's nine.","This is Daming. He's nine.",'这是大明，他九岁'),ch("This is Amy. She's from the UK.","This is Amy. She's from the UK.",'这是埃米，她来自英国')])},
+ {e:'3️⃣',t:'结尾',d:chips([ch('We are friends.','We are friends.','我们是朋友'),ch('We play together.','We play together.','我们一起玩'),ch('We have a happy day!','We have a happy day!','我们过了快乐的一天')])},
+];
+PANELS['yy1-phr']=[
+ {e:'🤝',t:'短语：几个单词手拉手',d:chips([ch('be friends','be friends','做朋友'),ch('play together','play together','一起玩'),ch('from the UK','from the UK','来自英国'),ch('here you are','here you are','给你（递东西时说）'),ch('have a happy day','have a happy day','过愉快的一天')])},
+];
+PANELS['yy2-phr']=[
+ {e:'🎒',t:'和文具有关的短语',d:chips([ch('school things','school things','学习用品'),ch('pencil case','pencil case','笔袋'),ch('lost and found','lost and found','失物招领，东西丢了去那儿找')])},
+ {e:'👀',t:'和动作有关的',d:chips([ch('take care of','take care of','照看'),ch('come back','come back','回来'),ch('look at','look at','看……'),ch('miss a turn','miss a turn','错过一次机会，玩游戏时用')])},
+];
+PANELS['yy1-sent']=[
+ {e:'💬',t:'课文里的句子，点一句听一句',d:chips([ch('Nice to meet you.','Nice to meet you.','很高兴见到你'),ch("I'm nine.","I'm nine.",'我九岁'),ch("We're from the UK.","We're from the UK.",'我们来自英国'),ch('Come and play!','Come and play!','过来玩'),ch("Let's play together!","Let's play together!",'我们一起玩吧'),ch('Here you are.','Here you are.','给你')])},
+ {e:'🧩',t:'排句子的窍门',s:'大写开头的放最前面，带句号或感叹号的放最后'},
+];
+PANELS['yy2-sent']=[
+ {e:'❓',t:'不知道是什么，问 What\'s this?',d:chips([ch("What's this?","What's this?",'这是什么'),ch("It's a book.","It's a book.",'它是一本书')])},
+ {e:'🤔',t:'猜是不是，问 Is it a pen?',s:'回答只有两种',d:chips([ch('Yes, it is.','Yes, it is.','是的'),ch("No, it isn't.","No, it isn't.",'不是')])},
+ {e:'🎒',t:'照看好你的东西',d:chips([ch('Take care of your school things!','Take care of your school things!','照看好你的学习用品'),ch('Pack my pen.','Pack my pen.','收拾好我的钢笔'),ch('Bye, kids.','Bye, kids.','再见，孩子们')])},
+];
+PANELS['yy2-aan']=[
+ {e:'1️⃣',t:'a 和 an 都是「一个」'},
+ {e:'🍎',t:'a e i o u 开头的，用 an',s:'因为 a apple 念起来会打架，加个 n 才顺口',d:chips([ch('an apple','an apple','a 开头'),ch('an eraser','an eraser','e 开头'),ch('an orange','an orange','o 开头')])},
+ {e:'✏️',t:'别的用 a',d:chips([ch('a pen','a pen'),ch('a ruler','a ruler'),ch('a pencil case','a pencil case'),ch('a bag','a bag')])},
+];
+PANELS['yy2-thisthat']=[
+ {e:'👇',t:'this：近处的，手能碰到',d:chips([ch('This is my brush.','This is my brush.','这是我的画笔')])},
+ {e:'👉',t:'that：远处的，得指一指',d:chips([ch('That is a pencil sharpener.','That is a pencil sharpener.','那是一个卷笔刀')])},
+ {e:'📞',t:'打电话有个特别用法',s:'this 指「我」，that 指「你」',d:chips([ch('This is Amy speaking.','Hello! This is Amy speaking.','我是埃米'),ch('Is that Tom?','Is that Tom?','你是汤姆吗')])},
+];
+PANELS['yy2-myyour']=[
+ {e:'🙋',t:'my：我的',d:chips([ch('my pen','my pen','我的钢笔'),ch('This is my tape.','This is my tape.','这是我的胶带')])},
+ {e:'👉',t:'your：你的',d:chips([ch('your bag','your bag','你的包'),ch('That is your crayon.','That is your crayon.','那是你的蜡笔')])},
+ {e:'⚠️',t:'后面一定要跟一个东西',s:'不能单独说 my，要说 my 什么'},
+];
+PANELS['yy2-tco']=[
+ {e:'👶',t:'后面接人或动物：照顾',d:chips([ch('I can take care of my little sister.','I can take care of my little sister.','我能照顾我的妹妹')])},
+ {e:'🎒',t:'后面接东西：保管好',d:chips([ch('Take care of your school things!','Take care of your school things!','照看好你的学习用品')])},
+ {e:'💡',t:'意思都是「好好对它」'},
+];
+PANELS['yy2-qa']=[
+ {e:'❓',t:'What\'s this? 这是什么？',d:chips([ch("What's this?","What's this?",'这是什么'),ch("It's my schoolbag.","It's my schoolbag.",'它是我的书包')])},
+ {e:'🤔',t:'Is it a pen? 它是钢笔吗？',s:'回答只能是这两句',d:chips([ch('Yes, it is.','Yes, it is.','是的，它是'),ch("No, it isn't.","No, it isn't.",'不，它不是')])},
+ {e:'🚫',t:'别说成 Yes, it\'s',s:'回答要说 Yes, it is.'},
+];
+PANELS['yy2-write']=[
+ {e:'🎒',t:'写《我的书包》，六句话',d:chips([ch('This is my schoolbag.','This is my schoolbag.','这是我的书包'),ch("What's in my schoolbag?","What's in my schoolbag?",'我的书包里有什么')])},
+ {e:'✏️',t:'列文具，注意 a 和 an',d:chips([ch('I have a pen, a pencil and a ruler.','I have a pen, a pencil and a ruler.','我有钢笔、铅笔和尺子'),ch('I have an eraser, too.','I have an eraser, too.','我还有一块橡皮')])},
+ {e:'❤️',t:'结尾',d:chips([ch('I like my schoolbag.','I like my schoolbag.','我喜欢我的书包'),ch('I take care of my school things.','I take care of my school things.','我照看好我的学习用品')])},
+];
+
+/* 单词的图标 */
+const WEMOJI={friend:'👫',meet:'🤝',play:'⚽',happy:'😄',new:'🆕',they:'👨‍👩‍👧',nine:'9️⃣',she:'👧',too:'➕',we:'👭',from:'🌍',he:'👦',come:'👋',help:'🆘',here:'📍',thank:'🙏',great:'👍',song:'🎵',dear:'💌',sing:'🎤',now:'⏰',know:'🧠',our:'🏠',with:'🤝',me:'🙋',everyone:'👥',twin:'👯',together:'🤗',everybody:'👥',
+ pen:'🖊️',pencil:'✏️',bag:'👜',ruler:'📏',this:'👇',in:'📥',schoolbag:'🎒',it:'📦',not:'🚫',that:'👉',yes:'✅',find:'🔍',bye:'👋',kid:'🧒',there:'📍',please:'🙏',back:'↩️',look:'👀',thing:'📦',pack:'🧳',guess:'🤔',eraser:'🧽',for:'🎁'};
+
+/* 把连环画挂到知识点上 */
+KPS.forEach(k=>{
+  if(PANELS[k.id]) k.panels=PANELS[k.id];
+  else if(k.word){
+    const w=k.word; const e=WEMOJI[w.en]||'🔤';
+    k.panels=[
+      {e,t:`<span class="en">${esc(w.en)}</span>`,s:w.zh,say:w.en+'。'+w.zh,d:chips([ch('🔊 '+w.en,w.en,w.zh)],'点一下再听一遍')},
+      w.ex?{e:'💬',t:`<span class="en" style="font-size:22px">${esc(w.ex)}</span>`,s:'课文里这样用',say:w.ex,d:chips([ch('🔊 '+w.ex,w.ex)],'')}:null,
+      {e:'✍️',t:'看一眼拼写',s:`<span class="en" style="font-size:28px;letter-spacing:.15em">${esc(w.en.split('').join(' '))}</span>`,say:w.en.split('').join(', ')},
+    ].filter(Boolean);
+  }
+});
 /* ================= 引擎 · 首页 / 地图 / 听写 / 家长 ================= */
 const SCREENS=['home','quiz','done','map','dict','parent'];
 function show(name){
