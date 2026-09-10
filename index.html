@@ -1393,7 +1393,27 @@ function toSpeech(html){
   t=t.replace(/[「」『』【】]/g,'').replace(/×/g,' 乘 ').replace(/÷/g,' 除以 ').replace(/−/g,' 减 ').replace(/\(/g,' 括号里的 ').replace(/\)/g,' ').replace(/(\d)\s*\+\s*(\d)/g,'$1 加 $2').replace(/=\s*\?/g,' 等于多少').replace(/=/g,' 等于 ').replace(/□/g,' 方框 ').replace(/\?/g,'？').replace(/[·•★☆✓✗▸→]/g,' ').replace(/\s+/g,' ').trim();
   return t;
 }
+/* ---- 神经语音：向服务器要 mp3；拿不到再退回系统语音 ---- */
+const SILENT='data:audio/wav;base64,UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
+const TTS_ON = location.protocol!=='file:' && !/github\.io$/.test(location.hostname);
+let AUD=null;
+function unlockAudio(){ try{ AUD=AUD||new Audio(); AUD.src=SILENT; AUD.play().catch(()=>{}); }catch(e){} }
+function stopSpeech(){ try{ if(AUD){ AUD.onended=null; AUD.onerror=null; AUD.pause(); AUD.removeAttribute('src'); AUD.load(); } }catch(e){} try{ speechSynthesis.cancel(); }catch(e){} }
+function ttsUrl(text,v){ return 'tts?v='+v+'&t='+encodeURIComponent(text); }
+function playServer(text, v){
+  return new Promise((res,rej)=>{
+    if(!TTS_ON) return rej(new Error('off'));
+    try{ AUD=AUD||new Audio(); AUD.onended=()=>res(true); AUD.onerror=()=>rej(new Error('audio')); AUD.src=ttsUrl(text,v); AUD.play().then(()=>{}, rej); }catch(e){ rej(e); }
+  });
+}
+function prefetchTTS(text,v){ if(TTS_ON && text) fetch(ttsUrl(text,v)).catch(()=>{}); }
+const langOf = t => /[\u4e00-\u9fff]/.test(t) ? 'zh' : 'en';
 function sayMixed(html, rate){
+  const t=toSpeech(html); if(!t) return;
+  stopSpeech();
+  playServer(t, langOf(t)).catch(()=>sayMixedLocal(t, rate));
+}
+function sayMixedLocal(html, rate){
   if(!('speechSynthesis' in window)) return;
   const t=toSpeech(html); if(!t) return;
   try{ speechSynthesis.cancel(); }catch(e){}
@@ -1409,6 +1429,10 @@ function sayMixed(html, rate){
 const spkBtn=(html,label,cls)=>`<button class="spk ${cls||'mini'}" data-say="${esc(toSpeech(html))}">🔊 ${label||'听讲解'}</button>`;
 function bindSay(root){ (root||document).querySelectorAll('[data-say]').forEach(b=>{ if(b._say) return; b._say=1; b.onclick=()=>sayMixed(b.dataset.say); }); }
 function say(text, lang, rate){
+  stopSpeech();
+  playServer(String(text), lang==='en'?'en':'zh').catch(()=>sayLocal(text, lang, rate));
+}
+function sayLocal(text, lang, rate){
   if(!('speechSynthesis' in window)) return;
   try{
     speechSynthesis.cancel();
@@ -1569,11 +1593,11 @@ function startSession(subj){
   if(!list.length){ toast('这一科的题都练过了，去别的科看看'); return; }
   d.newKp=(d.newKp||0)+list.filter(k=>rec(k.id).box===0).length; save();
   Q = {list, i:0, right:0, clean:0, ups:[], downs:[], subj, answered:false, level:n, boss};
-  try{ speechSynthesis.speak(new SpeechSynthesisUtterance('')); }catch(e){}   // iOS：在手势里先说一句空话，之后才允许自动朗读
+  unlockAudio(); try{ speechSynthesis.speak(new SpeechSynthesisUtterance('')); }catch(e){}   // iOS：在手势里先放一段静音、说一句空话，之后才允许自动朗读
   show('quiz'); nextQ();
 }
 function nextQ(){
-  try{ speechSynthesis.cancel(); }catch(e){}
+  stopSpeech();
   if(Q.i>=Q.list.length) return finish();
   const k = Q.list[Q.i]; const r = rec(k.id);
   $('#prog').style.width = (Q.i/Q.list.length*100)+'%';
@@ -1623,6 +1647,7 @@ function renderLesson(k, go){
     pv.addEventListener('pointerdown',e=>{ if(e.target.closest('.s3d,button,input')) return; x0=e.clientX; });
     pv.addEventListener('pointerup',e=>{ if(x0===null) return; const dx=e.clientX-x0; x0=null; if(dx<-40) nxt(); else if(dx>40) prv(); });
     if(S.autoRead!==false) setTimeout(()=>sayMixed(sayTxt),300);
+    const np=ps[Q.p+1]; if(np){ const nt=toSpeech(np.say || toSpeech(np.t+'。'+(np.s||''))); prefetchTTS(nt, langOf(nt)); }
   };
   draw();
 }
@@ -2126,7 +2151,7 @@ function show(name){
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on', b.dataset.go===name || (name==='done'&&b.dataset.go==='home')));
   closeSheet(); window.scrollTo(0,0);
   if(name==='home') renderHome(); if(name==='map') renderMap(); if(name==='dict') renderDict(); if(name==='parent') renderParent();
-  try{ speechSynthesis.cancel(); }catch(e){}
+  stopSpeech();
 }
 function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),1800); }
 function openSheet(html){ const s=$('#sheet'); s.innerHTML=`<div class="in">${html}</div>`; s.hidden=false; }
@@ -2244,6 +2269,7 @@ function renderDict(){
   };
 }
 function dictStart(id){
+  unlockAudio();
   const d=DICT.find(x=>x.id===id); const prevWrong=(S.dictWrong[id]||[]).filter(w=>d.words.includes(w));
   const rest=shuffle(d.words.filter(w=>!prevWrong.includes(w)));
   D={listId:id,lang:d.lang,words:prevWrong.concat(rest),i:0,phase:'read',wrongFirst:prevWrong.length>0};

@@ -1,0 +1,13 @@
+[Unit]
+Description=kpquiz neural TTS (edge-tts) proxy
+After=network.target
+
+[Service]
+ExecStart=/opt/kptts/venv/bin/python /opt/kptts/tts_server.py 9011
+Restart=always
+RestartSec=3
+User=root
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
