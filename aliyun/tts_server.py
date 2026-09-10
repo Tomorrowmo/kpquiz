@@ -3,7 +3,7 @@
 #   GET /tts?v=zh|en&t=<文本>[&r=-5%]  ->  audio/mpeg
 #   GET /tts/health                      ->  ok
 # 缓存目录 /var/cache/kptts，文件名 = sha1(voice|rate|text).mp3
-import asyncio, hashlib, os, sys, urllib.parse, threading
+import asyncio, hashlib, os, sys, urllib.parse, threading, unicodedata, re
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import edge_tts
 
@@ -19,12 +19,26 @@ os.makedirs(CACHE, exist_ok=True)
 LOCK = threading.Lock()
 INFLIGHT = {}
 
+def plain(text):
+    # 带声调的拼音（jià、jiǎ）会让语音服务不出声：去掉声调符号，去掉表情符号
+    t = ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
+    t = re.sub('[🀀-🿿☀-➿️]', ' ', t)
+    return re.sub(r'\s+', ' ', t).strip()
+
 def synth(text, voice, rate, path):
-    async def run():
+    async def run(t):
         tmp = path + '.part'
-        await edge_tts.Communicate(text, voice, rate=rate).save(tmp)
+        await edge_tts.Communicate(t, voice, rate=rate).save(tmp)
         os.replace(tmp, path)
-    asyncio.run(run())
+    try:
+        asyncio.run(run(text))
+    except Exception as e:
+        t2 = plain(text)
+        if t2 and t2 != text:
+            sys.stderr.write('retry plain: %r\n' % (t2[:40],))
+            asyncio.run(run(t2))
+        else:
+            raise
 
 class H(BaseHTTPRequestHandler):
     def log_message(self, fmt, *a):
